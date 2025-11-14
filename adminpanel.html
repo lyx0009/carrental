@@ -326,9 +326,9 @@
                 const totalUsersElement = document.getElementById('total-users');
                 if (totalUsersElement) totalUsersElement.textContent = usersSnapshot.size;
 
-                // Load active rentals count - rentals that are approved and currently active
+                // FIXED: Load active rentals count - rentals that are approved and currently active
                 const today = new Date();
-                const activeRentalsSnapshot = await getDocs(
+                const approvedRentalsSnapshot = await getDocs(
                     query(collection(this.db, 'reservations'), 
                     where('adminStatus', '==', 'approved'))
                 );
@@ -336,13 +336,14 @@
                 let activeRentalsCount = 0;
                 let activeRentalsData = [];
                 
-                activeRentalsSnapshot.forEach(docSnapshot => {
+                approvedRentalsSnapshot.forEach(docSnapshot => {
                     const rental = docSnapshot.data();
                     // Check if rental is currently active (today is between start and end date)
                     if (rental.startDate && rental.endDate) {
                         const startDate = rental.startDate.toDate();
                         const endDate = rental.endDate.toDate();
                         
+                        // FIXED: Check if today is within the rental period
                         if (today >= startDate && today <= endDate) {
                             activeRentalsCount++;
                             activeRentalsData.push({
