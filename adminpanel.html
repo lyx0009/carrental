@@ -326,63 +326,105 @@
                 const totalUsersElement = document.getElementById('total-users');
                 if (totalUsersElement) totalUsersElement.textContent = usersSnapshot.size;
 
-                // FIXED: Load active rentals count - rentals that are approved and currently active
-                const today = new Date();
-                const approvedRentalsSnapshot = await getDocs(
+                // Load ONLY APPROVED and NOT COMPLETED reservations for active rentals
+                console.log('Loading ACTIVE approved reservations from Firestore...');
+                const approvedReservationsSnapshot = await getDocs(
                     query(collection(this.db, 'reservations'), 
                     where('adminStatus', '==', 'approved'))
                 );
+                console.log('Total approved reservations found:', approvedReservationsSnapshot.size);
                 
                 let activeRentalsCount = 0;
                 let activeRentalsData = [];
+                const today = new Date();
                 
-                approvedRentalsSnapshot.forEach(docSnapshot => {
+                console.log('Today:', today.toLocaleDateString());
+                
+                approvedReservationsSnapshot.forEach(docSnapshot => {
                     const rental = docSnapshot.data();
-                    // Check if rental is currently active (today is between start and end date)
-                    if (rental.startDate && rental.endDate) {
-                        const startDate = rental.startDate.toDate();
-                        const endDate = rental.endDate.toDate();
+                    console.log('Checking approved rental:', docSnapshot.id, 'Status:', rental.adminStatus, rental.status);
+                    
+                    // Skip completed rentals
+                    if (rental.adminStatus === 'completed' || rental.status === 'completed') {
+                        console.log('Skipping - completed');
+                        return;
+                    }
+                    
+                    // Check if we have valid dates
+                    if (!rental.startDate || !rental.endDate) {
+                        console.log('Skipping - missing dates');
+                        return;
+                    }
+                    
+                    try {
+                        let startDate, endDate;
                         
-                        // FIXED: Check if today is within the rental period
-                        if (today >= startDate && today <= endDate) {
+                        // Convert Firestore timestamps to Date objects
+                        if (rental.startDate.toDate) {
+                            startDate = rental.startDate.toDate();
+                        } else {
+                            console.log('Invalid startDate format');
+                            return;
+                        }
+                        
+                        if (rental.endDate.toDate) {
+                            endDate = rental.endDate.toDate();
+                        } else {
+                            console.log('Invalid endDate format');
+                            return;
+                        }
+                        
+                        console.log('Rental dates - Start:', startDate.toLocaleDateString(), 'End:', endDate.toLocaleDateString());
+                        
+                        // Check if today falls between start and end dates (inclusive)
+                        const todayStart = new Date(today);
+                        todayStart.setHours(0, 0, 0, 0);
+                        
+                        const todayEnd = new Date(today);
+                        todayEnd.setHours(23, 59, 59, 999);
+                        
+                        const rentalStart = new Date(startDate);
+                        rentalStart.setHours(0, 0, 0, 0);
+                        
+                        const rentalEnd = new Date(endDate);
+                        rentalEnd.setHours(23, 59, 59, 999);
+                        
+                        console.log('Date comparison:');
+                        console.log('Today range:', todayStart, 'to', todayEnd);
+                        console.log('Rental range:', rentalStart, 'to', rentalEnd);
+                        console.log('Is today within rental range?', todayStart <= rentalEnd && todayEnd >= rentalStart);
+                        
+                        // Check if today overlaps with the rental period
+                        if (todayStart <= rentalEnd && todayEnd >= rentalStart) {
+                            console.log('✅ ACTIVE RENTAL FOUND:', docSnapshot.id);
                             activeRentalsCount++;
                             activeRentalsData.push({
                                 id: docSnapshot.id,
                                 ...rental
                             });
+                        } else {
+                            console.log('❌ Not active - outside date range');
                         }
+                        
+                    } catch (dateError) {
+                        console.error('Error processing dates:', dateError);
                     }
                 });
+                
+                console.log('Final active rentals count:', activeRentalsCount);
+                console.log('Active rentals data:', activeRentalsData);
                 
                 const activeRentalsElement = document.getElementById('active-rentals');
                 if (activeRentalsElement) activeRentalsElement.textContent = activeRentalsCount;
 
-                // FIXED: Load total revenue from ALL completed rentals (both reservations and rentalHistory)
+                // Load total revenue
                 let totalRevenue = 0;
+                const allReservationsForRevenue = await getDocs(collection(this.db, 'reservations'));
                 
-                // Get completed rentals from reservations
-                const completedReservations = await getDocs(
-                    query(collection(this.db, 'reservations'), 
-                    where('adminStatus', '==', 'approved'))
-                );
-                
-                completedReservations.forEach(docSnapshot => {
+                allReservationsForRevenue.forEach(docSnapshot => {
                     const rental = docSnapshot.data();
-                    // Check if rental is completed (end date has passed)
-                    if (rental.endDate && rental.endDate.toDate) {
-                        const endDate = rental.endDate.toDate();
-                        if (today > endDate && rental.totalPrice) {
-                            totalRevenue += rental.totalPrice;
-                        }
-                    }
-                });
-                
-                // Get completed rentals from rentalHistory
-                const rentalHistorySnapshot = await getDocs(collection(this.db, 'rentalHistory'));
-                rentalHistorySnapshot.forEach(docSnapshot => {
-                    const rental = docSnapshot.data();
-                    if (rental.totalAmount) {
-                        totalRevenue += rental.totalAmount;
+                    if (rental.totalPrice && rental.totalPrice > 0) {
+                        totalRevenue += rental.totalPrice;
                     }
                 });
                 
@@ -405,19 +447,18 @@
                     if (activeRentalsData.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No active rentals found.</td></tr>';
                     } else {
-                        // FIXED: Get customer names for active rentals
+                        console.log('Displaying', activeRentalsData.length, 'active rentals');
                         const activeRentalsWithCustomerNames = await Promise.all(
                             activeRentalsData.map(async (rental) => {
-                                let customerName = rental.userName || 'N/A';
+                                let customerName = rental.userName || rental.username || 'N/A';
                                 
-                                // If not available in rental data, try to fetch from users collection
                                 if ((!customerName || customerName === 'N/A') && rental.userId) {
                                     try {
                                         const userDocRef = doc(this.db, 'users', rental.userId);
                                         const userDoc = await getDoc(userDocRef);
                                         if (userDoc.exists()) {
                                             const userData = userDoc.data();
-                                            customerName = userData.fullName || userData.name || 'N/A';
+                                            customerName = userData.fullName || userData.name || userData.username || 'N/A';
                                         }
                                     } catch (error) {
                                         console.error('Error fetching user details:', error);
@@ -453,24 +494,34 @@
         createActiveRentalRow(id, rental) {
             const row = document.createElement('tr');
             
-            // Format dates
+            // Format dates with better error handling
             let startDate = 'N/A';
             let endDate = 'N/A';
             
             try {
-                if (rental.startDate && rental.startDate.toDate) {
-                    startDate = rental.startDate.toDate().toLocaleDateString();
+                if (rental.startDate) {
+                    if (rental.startDate.toDate) {
+                        startDate = rental.startDate.toDate().toLocaleDateString();
+                    } else if (rental.startDate instanceof Date) {
+                        startDate = rental.startDate.toLocaleDateString();
+                    }
                 }
-                if (rental.endDate && rental.endDate.toDate) {
-                    endDate = rental.endDate.toDate().toLocaleDateString();
+                
+                if (rental.endDate) {
+                    if (rental.endDate.toDate) {
+                        endDate = rental.endDate.toDate().toLocaleDateString();
+                    } else if (rental.endDate instanceof Date) {
+                        endDate = rental.endDate.toLocaleDateString();
+                    }
                 }
             } catch (dateError) {
-                console.error('Error formatting dates:', dateError);
+                console.error('Error formatting dates for rental:', id, dateError);
             }
             
+            // Only show "Stop Rental" button - no approve actions for active rentals
             row.innerHTML = `
                 <td>${id.substring(0, 8)}</td>
-                <td>${rental.customerName || rental.userName || 'N/A'}</td>
+                <td>${rental.customerName || rental.username || 'N/A'}</td>
                 <td>${rental.carName || 'N/A'}</td>
                 <td>${startDate}</td>
                 <td>${endDate}</td>
@@ -502,7 +553,7 @@
             }
 
             try {
-                // Update rental status with explicit stopped flag
+                // Update rental status to completed - but keep it in the system
                 await updateDoc(doc(this.db, 'reservations', rentalId), {
                     adminStatus: 'completed',
                     status: 'completed',
@@ -522,6 +573,7 @@
                 // Refresh the dashboard and cars
                 await this.loadDashboard();
                 await this.loadCars();
+                await this.loadRentals(); // Refresh rental history to show the completed rental
                 
             } catch (error) {
                 console.error('Error stopping rental:', error);
@@ -934,6 +986,7 @@
             
             // Check if proof of payment exists (both base64 and URL)
             const hasProofOfPayment = !!reservation.proofOfPaymentBase64 || !!reservation.proofOfPaymentUrl;
+            const paymentMethod = reservation.paymentMethod || 'onhand';
             
             row.innerHTML = `
                 <td>${id.substring(0, 8)}</td>
@@ -943,14 +996,17 @@
                 <td>${startDate}</td>
                 <td>${endDate}</td>
                 <td>₱${reservation.totalPrice ? reservation.totalPrice.toLocaleString() : 'N/A'}</td>
-                <td>${reservation.paymentMethod === 'onhand' ? 'Pay on Hand' : 'GCash'}</td>
+                <td>${paymentMethod === 'onhand' ? 'Pay on Hand' : 'GCash'}</td>
                 <td>
                     <span class="status-badge status-pending">Pending</span>
-                    ${hasProofOfPayment ? '<br><span class="proof-badge" style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 8px; font-size: 10px;">Proof Uploaded</span>' : ''}
+                    ${hasProofOfPayment ? '<br><span class="proof-badge" style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 8px; font-size: 10px;">Proof Uploaded</span>' : 
+                      paymentMethod === 'gcash' ? '<br><span class="proof-badge" style="background: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 8px; font-size: 10px;">Proof Required</span>' : ''}
                 </td>
                 <td>
                     ${hasProofOfPayment ? 
                         `<button class="btn btn-info view-proof" data-base64="${reservation.proofOfPaymentBase64 || ''}" data-url="${reservation.proofOfPaymentUrl || ''}" style="margin-bottom: 5px;">View Proof</button><br>` : 
+                        paymentMethod === 'gcash' ? 
+                        `<button class="btn btn-warning" style="margin-bottom: 5px; background: #ffc107; color: #000; cursor: not-allowed;" disabled>No Proof</button><br>` : 
                         ''
                     }
                     <button class="btn btn-success approve-reservation" data-id="${id}" data-car-id="${reservation.carId}">Approve</button>
@@ -974,29 +1030,130 @@
         }
 
         viewProofOfPayment(base64Data, urlData) {
+            // Create a modal specifically for proof of payment
+            const existingModal = document.getElementById('proofOfPaymentModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'proofOfPaymentModal';
+            modal.className = 'modal show';
+            modal.style.zIndex = '1000';
+            
+            let imageSrc = '';
+            
             if (base64Data) {
-                // Open base64 image in new window
-                const newWindow = window.open();
-                newWindow.document.write(`<img src="${base64Data}" style="max-width: 100%; height: auto;" />`);
+                imageSrc = base64Data;
             } else if (urlData) {
-                // Open URL in new window (fallback)
-                window.open(urlData, '_blank');
+                imageSrc = urlData;
             } else {
                 alert('No proof of payment available');
+                return;
             }
+            
+            modal.innerHTML = `
+                <div class="modal-card" style="max-width: 90%; max-height: 90vh; width: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Proof of Payment</h3>
+                        <button id="closeProofModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    <div style="text-align: center; max-height: 70vh; overflow: auto;">
+                        <img src="${imageSrc}" 
+                             style="max-width: 100%; max-height: 65vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
+                             alt="Proof of Payment"
+                             onerror="this.src='https://via.placeholder.com/400x300.png?text=Image+Not+Available'">
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <p style="color: #666; font-size: 14px;">Please verify the payment details before approving the reservation</p>
+                        <div style="margin-top: 10px;">
+                            <button id="downloadProof" class="btn btn-info" style="margin-right: 10px;">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <button id="zoomInProof" class="btn btn-info" style="margin-right: 10px;">
+                                <i class="fas fa-search-plus"></i> Zoom In
+                            </button>
+                            <button id="zoomOutProof" class="btn btn-info">
+                                <i class="fas fa-search-minus"></i> Zoom Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listeners for the modal
+            const closeBtn = document.getElementById('closeProofModal');
+            const downloadBtn = document.getElementById('downloadProof');
+            const zoomInBtn = document.getElementById('zoomInProof');
+            const zoomOutBtn = document.getElementById('zoomOutProof');
+            const image = modal.querySelector('img');
+            
+            let currentScale = 1;
+            
+            closeBtn.addEventListener('click', () => {
+                modal.remove();
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            downloadBtn.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `proof-of-payment-${Date.now()}.jpg`;
+                link.href = imageSrc;
+                link.click();
+            });
+            
+            zoomInBtn.addEventListener('click', () => {
+                currentScale += 0.2;
+                image.style.transform = `scale(${currentScale})`;
+            });
+            
+            zoomOutBtn.addEventListener('click', () => {
+                currentScale = Math.max(0.5, currentScale - 0.2);
+                image.style.transform = `scale(${currentScale})`;
+            });
+            
+            // Add keyboard support
+            document.addEventListener('keydown', function handleKeydown(e) {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', handleKeydown);
+                }
+            });
         }
 
         async approveReservation(id, carId) {
+            const reservationDocRef = doc(this.db, 'reservations', id);
+            const reservationDoc = await getDoc(reservationDocRef);
+            const reservation = reservationDoc.data();
+            
+            // Check if it's GCash payment without proof
+            if (reservation.paymentMethod === 'gcash' && 
+                !reservation.proofOfPaymentBase64 && 
+                !reservation.proofOfPaymentUrl) {
+                
+                const confirmApprove = confirm(
+                    'This is a GCash payment but no proof of payment was uploaded. ' +
+                    'Are you sure you want to approve this reservation without verifying the payment?'
+                );
+                
+                if (!confirmApprove) {
+                    return;
+                }
+            }
+
             if (!confirm('Are you sure you want to approve this reservation? This will mark the car as rented.')) {
                 return;
             }
 
             try {
                 // First check if the car is already rented for these dates
-                const reservationDocRef = doc(this.db, 'reservations', id);
-                const reservationDoc = await getDoc(reservationDocRef);
-                const reservation = reservationDoc.data();
-                
                 if (!reservation) {
                     alert('Reservation not found!');
                     return;
@@ -1255,14 +1412,13 @@
                 if (rentalsLoading) rentalsLoading.style.display = 'block';
                 if (rentalsTable) rentalsTable.style.display = 'none';
 
-                // Load from reservations collection (approved rentals)
+                // Load ALL rentals (approved, completed, cancelled) for rental history
                 const snapshot = await getDocs(
                     query(collection(this.db, 'reservations'), 
-                    where('adminStatus', '==', 'approved'),
                     orderBy('createdAt', 'desc'))
                 );
                 
-                console.log('Found', snapshot.size, 'approved rentals');
+                console.log('Found', snapshot.size, 'rentals for history');
                 
                 const tbody = document.getElementById('rentals-tbody');
                 if (tbody) {
@@ -1270,7 +1426,7 @@
                     this.allRentals = [];
 
                     if (snapshot.empty) {
-                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--muted);">No rental history found.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No rental history found.</td></tr>';
                     } else {
                         // FIXED: Get customer names for rentals
                         const rentalsWithCustomerNames = await Promise.all(
@@ -1340,23 +1496,6 @@
                 console.error('Error formatting dates:', dateError);
             }
             
-            // Determine status based on dates
-            const today = new Date();
-            let status = 'Active';
-            let statusClass = 'status-active';
-            
-            try {
-                if (rental.endDate && rental.endDate.toDate) {
-                    const endDateObj = rental.endDate.toDate();
-                    if (today > endDateObj) {
-                        status = 'Completed';
-                        statusClass = 'status-completed';
-                    }
-                }
-            } catch (dateError) {
-                console.error('Error determining status:', dateError);
-            }
-            
             // FIXED: Determine payment status with detailed information
             let paymentStatus = 'Paid';
             let paymentStatusClass = 'payment-paid-hand';
@@ -1397,6 +1536,7 @@
                 }
             }
             
+            // FIXED: Removed status column as requested
             row.innerHTML = `
                 <td><input class="rental-select" type="checkbox" data-id="${id}"></td>
                 <td>${id.substring(0, 8)}</td>
@@ -1405,9 +1545,6 @@
                 <td>${startDate}</td>
                 <td>${endDate}</td>
                 <td>₱${rental.totalPrice ? rental.totalPrice.toLocaleString() : 'N/A'}</td>
-                <td>
-                    <span class="status-badge ${statusClass}">${status}</span>
-                </td>
                 <td>
                     <span class="payment-status-badge ${paymentStatusClass}">${paymentStatus}</span>
                 </td>
@@ -1455,7 +1592,7 @@
 
             tbody.innerHTML = '';
             if (filteredRentals.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--muted);">No rentals found matching your search.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No rentals found matching your search.</td></tr>';
             } else {
                 filteredRentals.forEach(rental => {
                     const row = this.createRentalRow(rental.id, rental);
@@ -1739,6 +1876,63 @@
       box-shadow: 0 0 6px rgba(30,144,255,0.12);
       border-color: var(--blueB);
     }
+
+    /* Proof of Payment Modal Styles */
+    #proofOfPaymentModal .modal-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+      position: relative;
+    }
+
+    #proofOfPaymentModal img {
+      transition: transform 0.3s ease;
+      cursor: zoom-in;
+    }
+
+    #proofOfPaymentModal .btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    #proofOfPaymentModal .btn-info {
+      background: #17a2b8;
+      color: #fff;
+    }
+
+    #proofOfPaymentModal .btn-info:hover {
+      background: #138496;
+    }
+
+    /* Enhanced status indicators */
+    .proof-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .proof-uploaded {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .proof-required {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .proof-missing {
+      background: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
@@ -1926,6 +2120,7 @@
             <p>Loading rentals...</p>
           </div>
           
+          <!-- FIXED: Removed Status column from rental history table -->
           <table class="data-table" id="rentalsTable" style="display: none;">
             <thead>
               <tr>
@@ -1936,7 +2131,6 @@
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Total Price</th>
-                <th>Status</th>
                 <th>Payment Status</th>
               </tr>
             </thead>
