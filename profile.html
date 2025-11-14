@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile | Car Rental</title>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <!-- Firebase Config -->
+  <script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+      authDomain: "carrental-4bdd4.firebaseapp.com",
+      projectId: "carrental-4bdd4",
+      storageBucket: "carrental-4bdd4.firebasestorage.app",
+      messagingSenderId: "318648301485",
+      appId: "1:318648301485:web:bc543198901a732b701324",
+      measurementId: "G-1C2E4MXEDK"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background: white;
+      height: 100vh;
+      position: fixed;
+      padding: 30px 20px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .profile-info {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 15px;
+      border: 3px solid #2a5298;
+    }
+
+    .profile-info h3 {
+      font-size: 1.3rem;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    .profile-info p {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .sidebar-nav a {
+      padding: 12px 15px;
+      text-decoration: none;
+      color: #555;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+    }
+
+    .sidebar-nav a:hover {
+      background: #f0f5ff;
+      color: #2a5298;
+    }
+
+    .sidebar-nav a.active {
+      background: #2a5298;
+      color: white;
+    }
+
+    .sidebar-nav a.logout {
+      color: #e74c3c;
+      margin-top: auto;
+    }
+
+    .sidebar-nav a.logout:hover {
+      background: #ffeaea;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      padding: 40px;
+      width: calc(100% - 280px);
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      color: #2a5298;
+    }
+
+    header p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    /* Profile Sections */
+    .profile-section {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .profile-section h2 {
+      margin-bottom: 20px;
+      color: #333;
+      font-size: 1.5rem;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    /* Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .info-item {
+      padding: 15px;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+
+    .info-item label {
+      font-weight: 600;
+      color: #555;
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .info-item p {
+      color: #333;
+      font-size: 1rem;
+    }
+
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .data-table th, .data-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    .data-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .data-table tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    /* Status Badges */
+    .status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .status.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status.completed {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.failed {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* Payment Method Badges */
+    .payment-method {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .payment-method.credit-card {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .payment-method.gcash {
+      background: #e8f5e8;
+      color: #2e7d32;
+    }
+
+    .payment-method.cash {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+
+    .payment-method.debit-card {
+      background: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Error Message */
+    .error-message {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ffcdd2;
+      display: none;
+    }
+
+    /* Back Button */
+    .btn-dashboard {
+      display: inline-block;
+      background: #2a5298;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      width: auto;
+      margin: 20px auto;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .btn-dashboard:hover {
+      background: #1e3c72;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .back-button-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+      width: 100%;
+    }
+
+    /* Empty States */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    .empty-state p {
+      font-size: 1.1rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 240px;
+      }
+      
+      .main-content {
+        margin-left: 240px;
+        width: calc(100% - 240px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+      }
+      
+      .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+      
+      .sidebar-nav a {
+        margin-bottom: 0;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .main-content {
+        padding: 15px;
+      }
+      
+      .profile-section {
+        padding: 15px;
+      }
+      
+      .data-table {
+        font-size: 0.9rem;
+      }
+      
+      .data-table th, .data-table td {
+        padding: 10px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="profile-info">
+      <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Profile Picture" class="profile-pic" />
+      <h3 id="profile-fullname">Loading...</h3>
+      <p id="profile-username">Loading...</p>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="profile.html" class="active">Profile</a>
+      <a href="account.html">Account Settings</a>
+      <a href="#" class="logout" id="logout-link">Log Out</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header>
+      <h1 id="welcome-message">Welcome back!</h1>
+      <p>Manage your account and view your car rental activity below.</p>
+    </header>
+
+    <!-- Error Message -->
+    <div id="error-message" class="error-message"></div>
+
+    <!-- Profile Section -->
+    <section class="profile-section">
+      <h2>Personal Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Name</label>
+          <p id="info-fullname">Loading...</p>
+        </div>
+        <div class="info-item">
+          <label>Username</label>
+          <p id="info-username">Loading...</p>
+        </div>
+        <div class="info-item">
+          <label>Email</label>
+          <p id="info-email">Loading...</p>
+        </div>
+        <div class="info-item">
+          <label>Phone Number</label>
+          <p id="info-phone">Loading...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bookings Section -->
+    <section class="profile-section">
+      <h2>My Bookings</h2>
+      <div id="bookings-loading" class="loading-spinner">
+        <div class="spinner"></div>
+      </div>
+      <table class="data-table" id="bookings-table" style="display: none;">
+        <thead>
+          <tr>
+            <th>Car</th>
+            <th>Pick-up Date</th>
+            <th>Return Date</th>
+            <th>Total Days</th>
+            <th>Total Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="bookings-body">
+          <!-- Bookings will be loaded dynamically -->
+        </tbody>
+      </table>
+      <div id="no-bookings" class="empty-state" style="display: none;">
+        <p>You don't have any bookings yet.</p>
+      </div>
+    </section>
+
+    <!-- Payment History -->
+    <section class="profile-section">
+      <h2>Payment History</h2>
+      <div id="payments-loading" class="loading-spinner">
+        <div class="spinner"></div>
+      </div>
+      <table class="data-table" id="payments-table" style="display: none;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Car</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="payments-body">
+          <!-- Payments will be loaded dynamically -->
+        </tbody>
+      </table>
+      <div id="no-payments" class="empty-state" style="display: none;">
+        <p>No payment history available.</p>
+      </div>
+    </section>
+
+    <!-- Back to Dashboard Button -->
+    <div class="back-button-container">
+      <a href="userdashboard.html" class="btn-dashboard">← Back to Dashboard</a>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const errorMessage = document.getElementById('error-message');
+      const logoutLink = document.getElementById('logout-link');
+      
+      // Profile elements
+      const profileFullname = document.getElementById('profile-fullname');
+      const profileUsername = document.getElementById('profile-username');
+      const welcomeMessage = document.getElementById('welcome-message');
+      const infoFullname = document.getElementById('info-fullname');
+      const infoUsername = document.getElementById('info-username');
+      const infoEmail = document.getElementById('info-email');
+      const infoPhone = document.getElementById('info-phone');
+      
+      // Bookings elements
+      const bookingsLoading = document.getElementById('bookings-loading');
+      const bookingsTable = document.getElementById('bookings-table');
+      const bookingsBody = document.getElementById('bookings-body');
+      const noBookings = document.getElementById('no-bookings');
+      
+      // Payments elements
+      const paymentsLoading = document.getElementById('payments-loading');
+      const paymentsTable = document.getElementById('payments-table');
+      const paymentsBody = document.getElementById('payments-body');
+      const noPayments = document.getElementById('no-payments');
+      
+      let currentUser = null;
+      
+      // Show error message
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+      }
+      
+      // Hide error message
+      function hideError() {
+        errorMessage.style.display = 'none';
+      }
+
+      // Get payment method display text and CSS class
+      function getPaymentMethodDisplay(paymentMethod) {
+        const methodMap = {
+          'credit_card': { text: 'Credit Card', class: 'credit-card' },
+          'debit_card': { text: 'Debit Card', class: 'debit-card' },
+          'gcash': { text: 'GCash', class: 'gcash' },
+          'gcash_qr': { text: 'GCash QR', class: 'gcash' },
+          'gcash_number': { text: 'GCash Number', class: 'gcash' },
+          'cash': { text: 'Cash', class: 'cash' },
+          'pay_on_hand': { text: 'Pay on Hand', class: 'cash' }
+        };
+        
+        return methodMap[paymentMethod] || { text: paymentMethod || 'Credit Card', class: 'credit-card' };
+      }
+      
+      // Check if user is logged in
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          currentUser = user;
+          console.log('User logged in:', user.email);
+          
+          // Load user data from Firestore
+          loadUserData(user.uid);
+          
+          // Load user bookings
+          loadUserBookings(user.uid);
+          
+          // Load payment history
+          loadPaymentHistory(user.uid);
+        } else {
+          // Redirect to login if not authenticated
+          window.location.href = 'login.html';
+        }
+      });
+      
+      // Load user data from Firestore
+      async function loadUserData(userId) {
+        try {
+          const userDoc = await db.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            
+            // Update profile information
+            if (userData.fullName) {
+              profileFullname.textContent = userData.fullName;
+              infoFullname.textContent = userData.fullName;
+              
+              // Set username as first part of full name
+              const username = userData.fullName.split(' ')[0];
+              profileUsername.textContent = username;
+              infoUsername.textContent = username;
+              
+              // Update welcome message
+              welcomeMessage.textContent = `Welcome back, ${username}!`;
+            }
+            
+            if (userData.email) {
+              infoEmail.textContent = userData.email;
+            }
+            
+            if (userData.contactNumber) {
+              infoPhone.textContent = userData.contactNumber;
+            } else {
+              infoPhone.textContent = 'Not provided';
+            }
+          } else {
+            console.log('No user data found in Firestore');
+            // Use auth data as fallback
+            const username = currentUser.displayName || currentUser.email.split('@')[0];
+            profileFullname.textContent = currentUser.displayName || currentUser.email;
+            profileUsername.textContent = username;
+            infoFullname.textContent = currentUser.displayName || currentUser.email;
+            infoUsername.textContent = username;
+            infoEmail.textContent = currentUser.email;
+            infoPhone.textContent = 'Not provided';
+            
+            welcomeMessage.textContent = `Welcome back, ${username}!`;
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          showError('Failed to load user data. Please try again.');
+          
+          // Use auth data as fallback
+          const username = currentUser.displayName || currentUser.email.split('@')[0];
+          profileFullname.textContent = currentUser.displayName || currentUser.email;
+          profileUsername.textContent = username;
+          infoFullname.textContent = currentUser.displayName || currentUser.email;
+          infoUsername.textContent = username;
+          infoEmail.textContent = currentUser.email;
+          infoPhone.textContent = 'Not provided';
+          
+          welcomeMessage.textContent = `Welcome back, ${username}!`;
+        }
+      }
+      
+      // Load user bookings from Firestore
+      async function loadUserBookings(userId) {
+        try {
+          const querySnapshot = await db.collection('reservations')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .get();
+          
+          bookingsLoading.style.display = 'none';
+          
+          if (querySnapshot.empty) {
+            noBookings.style.display = 'block';
+            return;
+          }
+          
+          bookingsTable.style.display = 'table';
+          
+          querySnapshot.forEach((doc) => {
+            const booking = doc.data();
+            const bookingId = doc.id;
+            
+            // Format dates
+            const startDate = booking.startDate ? new Date(booking.startDate.seconds * 1000).toLocaleDateString() : 'N/A';
+            const endDate = booking.endDate ? new Date(booking.endDate.seconds * 1000).toLocaleDateString() : 'N/A';
+            
+            // Create table row
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${booking.carName || 'Unknown Car'}</td>
+              <td>${startDate}</td>
+              <td>${endDate}</td>
+              <td>${booking.totalDays || 'N/A'}</td>
+              <td>₱${booking.totalPrice ? booking.totalPrice.toLocaleString() : '0'}</td>
+              <td><span class="status ${booking.status || 'pending'}">${(booking.status || 'pending').toUpperCase()}</span></td>
+            `;
+            
+            bookingsBody.appendChild(row);
+          });
+          
+        } catch (error) {
+          console.error('Error loading bookings:', error);
+          bookingsLoading.style.display = 'none';
+          noBookings.style.display = 'block';
+          noBookings.innerHTML = '<p>Error loading bookings. Please try again later.</p>';
+        }
+      }
+      
+      // Load payment history from Firestore
+      async function loadPaymentHistory(userId) {
+        try {
+          // First, get all reservations for the user
+          const reservationsSnapshot = await db.collection('reservations')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .get();
+          
+          paymentsLoading.style.display = 'none';
+          
+          if (reservationsSnapshot.empty) {
+            noPayments.style.display = 'block';
+            return;
+          }
+          
+          paymentsTable.style.display = 'table';
+          
+          reservationsSnapshot.forEach((doc) => {
+            const reservation = doc.data();
+            const reservationId = doc.id;
+            
+            // Create payment entry from reservation
+            const createdDate = reservation.createdAt ? 
+              new Date(reservation.createdAt.seconds * 1000).toLocaleDateString() : 
+              new Date().toLocaleDateString();
+            
+            // Get payment method info
+            const paymentMethodInfo = getPaymentMethodDisplay(reservation.paymentMethod);
+            
+            // Determine payment status based on reservation status
+            let paymentStatus = 'completed';
+            let paymentStatusText = 'PAID';
+            
+            if (reservation.status === 'cancelled' || reservation.status === 'failed') {
+              paymentStatus = 'failed';
+              paymentStatusText = 'FAILED';
+            } else if (reservation.status === 'pending') {
+              paymentStatus = 'pending';
+              paymentStatusText = 'PENDING';
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${createdDate}</td>
+              <td>${reservation.carName || 'Unknown Car'}</td>
+              <td>₱${reservation.totalPrice ? reservation.totalPrice.toLocaleString() : '0'}</td>
+              <td>
+                <span class="payment-method ${paymentMethodInfo.class}">
+                  ${paymentMethodInfo.text}
+                </span>
+              </td>
+              <td><span class="status ${paymentStatus}">${paymentStatusText}</span></td>
+            `;
+            
+            paymentsBody.appendChild(row);
+          });
+          
+        } catch (error) {
+          console.error('Error loading payment history:', error);
+          paymentsLoading.style.display = 'none';
+          noPayments.style.display = 'block';
+          noPayments.innerHTML = '<p>Error loading payment history. Please try again later.</p>';
+        }
+      }
+      
+      // Logout functionality
+      if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          if (confirm('Are you sure you want to logout?')) {
+            auth.signOut().then(() => {
+              window.location.href = 'login.html';
+            }).catch((error) => {
+              console.error('Logout error:', error);
+              showError('Failed to logout. Please try again.');
+            });
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

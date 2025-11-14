@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Setup - One Time Use</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #1a2a6c;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #1a73e8;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: left;
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+            outline: none;
+        }
+        
+        button {
+            background: linear-gradient(to right, #1a73e8, #1a2a6c);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+            text-align: left;
+        }
+        
+        .success {
+            background: #e7f7ef;
+            border: 1px solid #34c759;
+            color: #1f7e3f;
+            display: block;
+        }
+        
+        .error {
+            background: #fde8e8;
+            border: 1px solid #ea4335;
+            color: #c5221f;
+            display: block;
+        }
+        
+        .credentials {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .credentials h3 {
+            color: #1a2a6c;
+            margin-bottom: 10px;
+        }
+        
+        .credentials p {
+            margin: 5px 0;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        .step-number {
+            background: #1a73e8;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin User Setup</h1>
+        <p class="subtitle">Run this once to create your admin user</p>
+        
+        <div class="info-box">
+            <h3>Important Information</h3>
+            <p>This will create an admin user in Firebase Authentication and set up the admin role in Firestore. Make sure you have:</p>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">Enabled Email/Password authentication in Firebase Console</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">Temporarily set Firestore rules to allow writes</div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="adminEmail">Admin Email</label>
+            <input type="email" id="adminEmail" value="admin@carrental.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="adminPassword">Admin Password</label>
+            <input type="password" id="adminPassword" value="Admin123!">
+        </div>
+        
+        <button id="setupButton" onclick="setupAdmin()">Setup Admin User</button>
+        
+        <div id="result" class="result"></div>
+        
+        <div id="credentials" class="credentials" style="display: none;">
+            <h3>Admin Credentials Created</h3>
+            <p><strong>Email:</strong> <span id="credEmail"></span></p>
+            <p><strong>Password:</strong> <span id="credPassword"></span></p>
+            <p><strong>User ID:</strong> <span id="credUID"></span></p>
+            <p style="margin-top: 10px; color: #d93025; font-weight: 600;">Save these credentials securely!</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+            authDomain: "carrental-4bdd4.firebaseapp.com",
+            projectId: "carrental-4bdd4",
+            storageBucket: "carrental-4bdd4.firebasestorage.app",
+            messagingSenderId: "318648301485",
+            appId: "1:318648301485:web:bc543198901a732b701324",
+            measurementId: "G-1C2E4MXEDK"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.setupAdmin = async function() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const setupButton = document.getElementById('setupButton');
+            const resultDiv = document.getElementById('result');
+            const credentialsDiv = document.getElementById('credentials');
+            
+            // Reset UI
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'none';
+            credentialsDiv.style.display = 'none';
+            
+            // Validate inputs
+            if (!email || !password) {
+                showResult('Please fill in both email and password.', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showResult('Password must be at least 6 characters long.', 'error');
+                return;
+            }
+            
+            try {
+                // Update button to show loading state
+                setupButton.textContent = 'Setting up admin user...';
+                setupButton.disabled = true;
+                
+                // Step 1: Create user in Firebase Authentication
+                showResult('Creating user in Firebase Authentication...', '');
+                
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // Step 2: Add admin role and user data to Firestore
+                showResult('Adding admin role to Firestore...', '');
+                
+                await setDoc(doc(db, "users", user.uid), {
+                    email: email,
+                    role: "admin",
+                    name: "System Administrator",
+                    permissions: ["all"],
+                    createdAt: new Date(),
+                    isActive: true
+                });
+                
+                // Step 3: Sign out (for security)
+                await signOut(auth);
+                
+                // Show success message
+                showResult('✅ Admin user created successfully!', 'success');
+                
+                // Display credentials
+                document.getElementById('credEmail').textContent = email;
+                document.getElementById('credPassword').textContent = password;
+                document.getElementById('credUID').textContent = user.uid;
+                credentialsDiv.style.display = 'block';
+                
+                console.log("Admin user created with UID:", user.uid);
+                
+            } catch (error) {
+                console.error("Error creating admin user:", error);
+                
+                let errorMessage = "An error occurred while creating the admin user.";
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = "This email is already registered. Please use a different email or check if the admin user already exists.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = "The email address is not valid.";
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = "The password is too weak. Please use a stronger password.";
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    errorMessage = "Email/password accounts are not enabled. Please enable them in the Firebase Console.";
+                } else if (error.code === 'permission-denied') {
+                    errorMessage = "Firestore permission denied. Please temporarily loosen your Firestore security rules to allow writes.";
+                }
+                
+                showResult(`❌ ${errorMessage}`, 'error');
+            } finally {
+                // Reset button
+                setupButton.textContent = 'Setup Admin User';
+                setupButton.disabled = false;
+            }
+        };
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                resultDiv.classList.add('success');
+            } else if (type === 'error') {
+                resultDiv.classList.add('error');
+            }
+        }
+    </script>
+</body>
+</html>

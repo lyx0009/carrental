@@ -1,0 +1,502 @@
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Styles - Updated to White */
+        .sidebar {
+            width: 260px;
+            background: white;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+        
+        .logo {
+            padding: 25px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo h2 {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2c3e50;
+        }
+        
+        .logo i {
+            font-size: 1.6rem;
+            color: #3498db;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .sidebar-nav ul {
+            list-style: none;
+        }
+        
+        .sidebar-nav li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            color: #555;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-nav a:hover, .sidebar-nav li.active a {
+            background: #f0f8ff;
+            color: #3498db;
+            border-left: 4px solid #3498db;
+        }
+        
+        .sidebar-nav a i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .user-avatar i {
+            font-size: 2.5rem;
+            color: #3498db;
+        }
+        
+        .user-details h4 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .user-details p {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            color: #333;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #e9ecef;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Updated Top Navigation to Match Rental History */
+        .top-nav {
+            background: white;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            height: 80px;
+        }
+        
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #555;
+            cursor: pointer;
+            display: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .top-nav h1 {
+            font-size: 1.6rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        
+        .notification {
+            position: relative;
+            cursor: pointer;
+            color: #555;
+            font-size: 1.3rem;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #e74c3c;
+            color: white;
+            font-size: 0.7rem;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        
+        .user-profile:hover {
+            background: #f8f9fa;
+        }
+        
+        .user-profile .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 1.4rem;
+        }
+        
+        .user-profile span {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        /* Content Area Styles */
+        .content-area {
+            flex: 1;
+            padding: 25px;
+            background: #f5f7fa;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .history-filter select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .history-filter select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        /* Rental History Container */
+        .rental-history-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .rental-history-item {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .rental-car-info {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .car-image-small {
+            width: 100px;
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 2rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .car-image-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .rental-details h4 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .rental-details p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .rental-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .rental-status.completed {
+            background: #e8f8ef;
+            color: #27ae60;
+        }
+        
+        .rental-status.paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .rental-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .rental-cost {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+            padding-left: 20px;
+            border-left: 1px solid #eee;
+            min-width: 200px;
+        }
+        
+        .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .details-btn {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .details-btn:hover {
+            background: #e9ecef;
+            border-color: #ccc;
+        }
+        
+        /* Loading Spinner */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-history {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .no-history i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                height: 100%;
+                z-index: 100;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .rental-history-item {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .rental-cost {
+                align-items: flex-start;
+                width: 100%;
+                border-left: none;
+                padding-left: 0;
+                border-top: 1px solid #eee;
+                padding-top: 20px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .content-area {
+                padding: 15px;
+            }
+            
+            .rental-car-info {
+                flex-direction: column;
+            }
+            
+            .car-image-small {
+                width: 100%;
+                height: 120px;
+            }
+            
+            .top-nav {
+                padding: 15px 20px;
+                height: 70px;
+            }
+            
+            .top-nav h1 {
+                font-size: 1.4rem;
+            }
+            
+            .user-profile span {
+                display: none;
+            }
+            
+            .user-profile {
+                padding: 8px;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .history-filter {
+                width: 100%;
+            }
+            
+            .history-filter select {
+                width: 100%;
+            }
+        }

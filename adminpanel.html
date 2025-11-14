@@ -1,0 +1,2143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Car Rental Admin Dashboard</title>
+  
+  <!-- Firebase SDK v9 (Modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { 
+        getAuth, 
+        onAuthStateChanged, 
+        signOut 
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        getDoc,
+        collection,
+        getDocs,
+        addDoc,
+        updateDoc,
+        deleteDoc,
+        orderBy,
+        query,
+        where,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+      authDomain: "carrental-4bdd4.firebaseapp.com",
+      projectId: "carrental-4bdd4",
+      storageBucket: "carrental-4bdd4.firebasestorage.app",
+      messagingSenderId: "318648301485",
+      appId: "1:318648301485:web:bc543198901a732b701324",
+      measurementId: "G-1C2E4MXEDK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    console.log('Firebase initialized successfully');
+
+    // ===== AUTHENTICATION CHECK =====
+    // Check if user is authenticated and has admin role
+    onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? 'User logged in' : 'No user');
+      
+      // Force sign out any existing sessions on page load for security
+      if (!user) {
+        try {
+          await signOut(auth);
+          showAuthError('Please log in to access the admin panel.');
+        } catch (error) {
+          console.log('No user to sign out');
+          showAuthError('Please log in to access the admin panel.');
+        }
+        return;
+      }
+      
+      if (user) {
+        try {
+          // Check if user has admin role
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (userDoc.exists() && userDoc.data().role === 'admin') {
+            // User is admin, show admin panel
+            document.getElementById('authErrorContainer').style.display = 'none';
+            document.getElementById('adminPanelContent').style.display = 'block';
+            console.log('Admin access granted');
+            
+            // Initialize the admin panel
+            if (window.carRentalAdmin) {
+              await window.carRentalAdmin.init();
+            }
+          } else {
+            // User is not admin, show error
+            await signOut(auth);
+            showAuthError('You do not have administrator privileges.');
+            console.log('User is not admin');
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          await signOut(auth);
+          showAuthError('Error verifying user permissions. Please try again.');
+        }
+      } else {
+        // No user is logged in, show error
+        showAuthError('Please log in to access the admin panel.');
+        console.log('No user logged in');
+      }
+    });
+
+    // Function to show authentication error
+    function showAuthError(message) {
+      document.getElementById('authErrorMessage').textContent = message;
+      document.getElementById('authErrorContainer').style.display = 'flex';
+      document.getElementById('adminPanelContent').style.display = 'none';
+    }
+
+    // Go to login button handler
+    document.getElementById('goToLoginBtn').addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
+
+    // ===== FIXED ADMIN CLASS =====
+    class CarRentalAdmin {
+        constructor() {
+            this.currentUser = null;
+            this.selectedCars = new Set();
+            this.selectedRentals = new Set();
+            this.availableCars = [];
+            this.allUsers = [];
+            this.allRentals = [];
+            this.auth = auth;
+            this.db = db;
+        }
+
+        async init() {
+            console.log('Admin panel starting...');
+            this.setupEventListeners();
+            await this.loadDashboard();
+            await this.loadCars();
+            await this.loadReservations();
+            await this.loadUsers();
+            await this.loadRentals();
+        }
+
+        setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
+            // Section switching
+            document.querySelectorAll(".sidebar li").forEach(li => {
+                li.addEventListener("click", () => {
+                    if (li.dataset.section === "account-settings") {
+                        window.location.href = "adminsettings.html";
+                        return;
+                    }
+
+                    document.querySelectorAll(".sidebar li").forEach(i => i.classList.remove("active"));
+                    li.classList.add("active");
+
+                    const targetSec = document.getElementById(li.dataset.section);
+                    if(targetSec){
+                        document.querySelectorAll(".section").forEach(sec => sec.classList.add("hidden"));
+                        targetSec.classList.remove("hidden");
+                    }
+                });
+            });
+
+            // Car modals - Check if elements exist before adding listeners
+            const addCarModal = document.getElementById("addCarModal");
+            const editCarModal = document.getElementById("editCarModal");
+            const openAddCarBtn = document.getElementById("openAddCar");
+            const cancelAddCarBtn = document.getElementById("cancelAddCar");
+            const cancelEditCarBtn = document.getElementById("cancelEditCar");
+            const closeAddBtn = document.getElementById("closeAdd");
+            const closeEditBtn = document.getElementById("closeEdit");
+
+            if (openAddCarBtn) {
+                openAddCarBtn.onclick = () => addCarModal.classList.add("show");
+            }
+            if (cancelAddCarBtn) {
+                cancelAddCarBtn.onclick = () => addCarModal.classList.remove("show");
+            }
+            if (cancelEditCarBtn) {
+                cancelEditCarBtn.onclick = () => editCarModal.classList.remove("show");
+            }
+            if (closeAddBtn) {
+                closeAddBtn.onclick = () => addCarModal.classList.remove("show");
+            }
+            if (closeEditBtn) {
+                closeEditBtn.onclick = () => editCarModal.classList.remove("show");
+            }
+
+            // Image preview for add car
+            const carImageInput = document.getElementById("carImage");
+            if (carImageInput) {
+                carImageInput.addEventListener("change", e => {
+                    const preview = document.getElementById("imagePreview");
+                    const file = e.target.files[0];
+                    if(file){
+                        const reader = new FileReader();
+                        reader.onload = () => preview.innerHTML = `<img src="${reader.result}" />`;
+                        reader.readAsDataURL(file);
+                    }else{
+                        preview.innerText = "No image selected";
+                    }
+                });
+            }
+
+            // Image preview for edit car
+            const editCarImageInput = document.getElementById("editCarImage");
+            if (editCarImageInput) {
+                editCarImageInput.addEventListener("change", e => {
+                    const preview = document.getElementById("editImagePreview");
+                    const file = e.target.files[0];
+                    if(file){
+                        const reader = new FileReader();
+                        reader.onload = () => preview.innerHTML = `<img src="${reader.result}" />`;
+                        reader.readAsDataURL(file);
+                    }else{
+                        preview.innerText = "No image selected";
+                    }
+                });
+            }
+
+            // Add car form
+            const addCarForm = document.getElementById("addCarForm");
+            if (addCarForm) {
+                addCarForm.onsubmit = (e) => this.addCar(e);
+            }
+
+            // Edit car form
+            const editCarForm = document.getElementById("editCarForm");
+            if (editCarForm) {
+                editCarForm.onsubmit = (e) => this.updateCar(e);
+            }
+
+            // Remove selected cars
+            const removeSelectedBtn = document.getElementById("removeSelected");
+            if (removeSelectedBtn) {
+                removeSelectedBtn.onclick = () => this.removeSelectedCars();
+            }
+
+            // Select all for cars
+            const selectAllCheckbox = document.getElementById("selectAll");
+            if (selectAllCheckbox) {
+                selectAllCheckbox.onclick = function(){
+                    document.querySelectorAll("#carTable tbody .row-select")
+                        .forEach(cb => cb.checked = this.checked);
+                };
+            }
+
+            // Select all for rentals
+            const selectAllRentalsCheckbox = document.getElementById("selectAllRentals");
+            if (selectAllRentalsCheckbox) {
+                selectAllRentalsCheckbox.onclick = function(){
+                    document.querySelectorAll("#rentalsTable tbody .rental-select")
+                        .forEach(cb => cb.checked = this.checked);
+                };
+            }
+
+            // Logout button
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to logout?')) {
+                        signOut(auth).then(() => {
+                            window.location.href = 'login.html';
+                        });
+                    }
+                });
+            }
+
+            // Refresh buttons - Check if they exist
+            const refreshReservationsBtn = document.getElementById('refresh-reservations');
+            if (refreshReservationsBtn) {
+                refreshReservationsBtn.addEventListener('click', () => {
+                    this.loadReservations();
+                });
+            }
+
+            const refreshUsersBtn = document.getElementById('refresh-users');
+            if (refreshUsersBtn) {
+                refreshUsersBtn.addEventListener('click', () => {
+                    this.loadUsers();
+                });
+            }
+
+            const refreshRentalsBtn = document.getElementById('refresh-rentals');
+            if (refreshRentalsBtn) {
+                refreshRentalsBtn.addEventListener('click', () => {
+                    this.loadRentals();
+                });
+            }
+
+            // User search functionality
+            const userSearchInput = document.getElementById('userSearch');
+            if (userSearchInput) {
+                userSearchInput.addEventListener('input', (e) => {
+                    this.searchUsers(e.target.value);
+                });
+            }
+
+            // Rental search functionality
+            const rentalSearchInput = document.getElementById('rentalSearch');
+            if (rentalSearchInput) {
+                rentalSearchInput.addEventListener('input', (e) => {
+                    this.searchRentals(e.target.value);
+                });
+            }
+
+            // Remove selected rentals
+            const removeSelectedRentalsBtn = document.getElementById('removeSelectedRentals');
+            if (removeSelectedRentalsBtn) {
+                removeSelectedRentalsBtn.onclick = () => this.removeSelectedRentals();
+            }
+
+            // Close modals when clicking outside
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('show');
+                    }
+                });
+            });
+
+            console.log('Event listeners setup complete');
+        }
+
+        async loadDashboard() {
+            console.log('Loading dashboard data...');
+            try {
+                const dashboardLoading = document.getElementById('dashboard-loading');
+                const activeRentalsTable = document.getElementById('activeRentalsTable');
+                
+                if (dashboardLoading) dashboardLoading.style.display = 'block';
+                if (activeRentalsTable) activeRentalsTable.style.display = 'none';
+
+                // Load users count
+                const usersSnapshot = await getDocs(collection(this.db, 'users'));
+                const totalUsersElement = document.getElementById('total-users');
+                if (totalUsersElement) totalUsersElement.textContent = usersSnapshot.size;
+
+                // Load active rentals count - rentals that are approved and currently active
+                const today = new Date();
+                const activeRentalsSnapshot = await getDocs(
+                    query(collection(this.db, 'reservations'), 
+                    where('adminStatus', '==', 'approved'))
+                );
+                
+                let activeRentalsCount = 0;
+                let activeRentalsData = [];
+                
+                activeRentalsSnapshot.forEach(docSnapshot => {
+                    const rental = docSnapshot.data();
+                    // Check if rental is currently active (today is between start and end date)
+                    if (rental.startDate && rental.endDate) {
+                        const startDate = rental.startDate.toDate();
+                        const endDate = rental.endDate.toDate();
+                        
+                        if (today >= startDate && today <= endDate) {
+                            activeRentalsCount++;
+                            activeRentalsData.push({
+                                id: docSnapshot.id,
+                                ...rental
+                            });
+                        }
+                    }
+                });
+                
+                const activeRentalsElement = document.getElementById('active-rentals');
+                if (activeRentalsElement) activeRentalsElement.textContent = activeRentalsCount;
+
+                // FIXED: Load total revenue from ALL completed rentals (both reservations and rentalHistory)
+                let totalRevenue = 0;
+                
+                // Get completed rentals from reservations
+                const completedReservations = await getDocs(
+                    query(collection(this.db, 'reservations'), 
+                    where('adminStatus', '==', 'approved'))
+                );
+                
+                completedReservations.forEach(docSnapshot => {
+                    const rental = docSnapshot.data();
+                    // Check if rental is completed (end date has passed)
+                    if (rental.endDate && rental.endDate.toDate) {
+                        const endDate = rental.endDate.toDate();
+                        if (today > endDate && rental.totalPrice) {
+                            totalRevenue += rental.totalPrice;
+                        }
+                    }
+                });
+                
+                // Get completed rentals from rentalHistory
+                const rentalHistorySnapshot = await getDocs(collection(this.db, 'rentalHistory'));
+                rentalHistorySnapshot.forEach(docSnapshot => {
+                    const rental = docSnapshot.data();
+                    if (rental.totalAmount) {
+                        totalRevenue += rental.totalAmount;
+                    }
+                });
+                
+                const totalRevenueElement = document.getElementById('total-revenue');
+                if (totalRevenueElement) totalRevenueElement.textContent = `₱${totalRevenue.toLocaleString()}`;
+
+                // Load available cars count
+                const availableCarsSnapshot = await getDocs(
+                    query(collection(this.db, 'cars'), 
+                    where('available', '==', true))
+                );
+                const availableCarsElement = document.getElementById('available-cars');
+                if (availableCarsElement) availableCarsElement.textContent = availableCarsSnapshot.size;
+
+                // Display active rentals table
+                const tbody = document.getElementById('active-rentals-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+
+                    if (activeRentalsData.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No active rentals found.</td></tr>';
+                    } else {
+                        // FIXED: Get customer names for active rentals
+                        const activeRentalsWithCustomerNames = await Promise.all(
+                            activeRentalsData.map(async (rental) => {
+                                let customerName = rental.userName || 'N/A';
+                                
+                                // If not available in rental data, try to fetch from users collection
+                                if ((!customerName || customerName === 'N/A') && rental.userId) {
+                                    try {
+                                        const userDocRef = doc(this.db, 'users', rental.userId);
+                                        const userDoc = await getDoc(userDocRef);
+                                        if (userDoc.exists()) {
+                                            const userData = userDoc.data();
+                                            customerName = userData.fullName || userData.name || 'N/A';
+                                        }
+                                    } catch (error) {
+                                        console.error('Error fetching user details:', error);
+                                    }
+                                }
+                                
+                                return {
+                                    ...rental,
+                                    customerName
+                                };
+                            })
+                        );
+                        
+                        activeRentalsWithCustomerNames.forEach(rental => {
+                            const row = this.createActiveRentalRow(rental.id, rental);
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+
+                if (dashboardLoading) dashboardLoading.style.display = 'none';
+                if (activeRentalsTable) activeRentalsTable.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                const dashboardLoading = document.getElementById('dashboard-loading');
+                if (dashboardLoading) {
+                    dashboardLoading.innerHTML = `<p>Error loading dashboard: ${error.message}</p>`;
+                }
+            }
+        }
+
+        createActiveRentalRow(id, rental) {
+            const row = document.createElement('tr');
+            
+            // Format dates
+            let startDate = 'N/A';
+            let endDate = 'N/A';
+            
+            try {
+                if (rental.startDate && rental.startDate.toDate) {
+                    startDate = rental.startDate.toDate().toLocaleDateString();
+                }
+                if (rental.endDate && rental.endDate.toDate) {
+                    endDate = rental.endDate.toDate().toLocaleDateString();
+                }
+            } catch (dateError) {
+                console.error('Error formatting dates:', dateError);
+            }
+            
+            row.innerHTML = `
+                <td>${id.substring(0, 8)}</td>
+                <td>${rental.customerName || rental.userName || 'N/A'}</td>
+                <td>${rental.carName || 'N/A'}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>₱${rental.totalPrice ? rental.totalPrice.toLocaleString() : 'N/A'}</td>
+                <td>
+                    <span class="status-badge status-active">Active</span>
+                </td>
+                <td>
+                    <button class="btn btn-info stop-rental" data-id="${id}" data-car-id="${rental.carId}">Stop Rental</button>
+                </td>
+            `;
+
+            // Add event listener for stop rental button
+            const stopRentalBtn = row.querySelector('.stop-rental');
+            if (stopRentalBtn) {
+                stopRentalBtn.addEventListener('click', () => {
+                    const rentalId = stopRentalBtn.getAttribute('data-id');
+                    const carId = stopRentalBtn.getAttribute('data-car-id');
+                    this.stopRental(rentalId, carId);
+                });
+            }
+
+            return row;
+        }
+
+        async stopRental(rentalId, carId) {
+            if (!confirm('Are you sure you want to stop this rental and make the car available again?')) {
+                return;
+            }
+
+            try {
+                // Update rental status with explicit stopped flag
+                await updateDoc(doc(this.db, 'reservations', rentalId), {
+                    adminStatus: 'completed',
+                    status: 'completed',
+                    adminStopped: true,
+                    stoppedAt: serverTimestamp(),
+                    completedAt: serverTimestamp()
+                });
+
+                // Make the car available again
+                await updateDoc(doc(this.db, 'cars', carId), {
+                    status: 'Available',
+                    available: true
+                });
+
+                alert('Rental stopped successfully! Car is now available for new rentals.');
+                
+                // Refresh the dashboard and cars
+                await this.loadDashboard();
+                await this.loadCars();
+                
+            } catch (error) {
+                console.error('Error stopping rental:', error);
+                alert('Error stopping rental: ' + error.message);
+            }
+        }
+
+        async loadCars() {
+            console.log('Loading cars...');
+            
+            try {
+                const carsLoading = document.getElementById('cars-loading');
+                const carTable = document.getElementById('carTable');
+                
+                if (carsLoading) carsLoading.style.display = 'block';
+                if (carTable) carTable.style.display = 'none';
+
+                // Load from cars collection
+                const snapshot = await getDocs(
+                    query(collection(this.db, 'cars'), 
+                    orderBy('createdAt', 'desc'))
+                );
+                console.log('Found', snapshot.size, 'cars in Firebase');
+                
+                const tbody = document.getElementById('cars-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    
+                    this.availableCars = [];
+
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 20px; color: var(--muted);">No cars found.</td></tr>';
+                    } else {
+                        snapshot.forEach(docSnapshot => {
+                            const car = docSnapshot.data();
+                            car.id = docSnapshot.id;
+                            this.availableCars.push(car);
+                            const row = this.createCarRow(docSnapshot.id, car);
+                            tbody.appendChild(row);
+                        });
+                        console.log('Cars loaded from Firebase');
+                    }
+                }
+
+                if (carsLoading) carsLoading.style.display = 'none';
+                if (carTable) carTable.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading cars:', error);
+                const carsLoading = document.getElementById('cars-loading');
+                if (carsLoading) {
+                    carsLoading.innerHTML = `<p>Error loading cars: ${error.message}</p>`;
+                }
+            }
+        }
+
+        createCarRow(id, car) {
+            const row = document.createElement('tr');
+            
+            // Determine status badge class
+            let statusClass = 'status-available';
+            if (car.status === 'Rented') statusClass = 'status-rented';
+            if (car.status === 'Maintenance') statusClass = 'status-maintenance';
+            
+            row.innerHTML = `
+                <td><input class="row-select" type="checkbox" data-id="${id}"></td>
+                <td>${id.substring(0, 8)}</td>
+                <td>${car.name || car.model || 'N/A'}</td>
+                <td>${car.type || 'N/A'}</td>
+                <td>${car.plate || 'N/A'}</td>
+                <td>${car.seater || 'N/A'}</td>
+                <td><span class="status-badge ${statusClass}">${car.status || 'N/A'}</span></td>
+                <td>${car.available ? 'Yes' : 'No'}</td>
+                <td>₱${car.price || '0'}</td>
+                <td>
+                    <img class="thumb" src="${car.mainImage || car.imageBase64 || 'https://via.placeholder.com/140x90.png?text=Car'}" alt="${car.name}">
+                </td>
+                <td>
+                    <button class="btn btn-warning edit-car" data-id="${id}">Edit</button>
+                </td>
+            `;
+
+            const checkbox = row.querySelector('.row-select');
+            if (checkbox) {
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        this.selectedCars.add(id);
+                    } else {
+                        this.selectedCars.delete(id);
+                        const selectAll = document.getElementById('selectAll');
+                        if (selectAll) selectAll.checked = false;
+                    }
+                });
+            }
+
+            // Add event listener for edit button
+            const editBtn = row.querySelector('.edit-car');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    const carId = editBtn.getAttribute('data-id');
+                    this.openEditCarModal(carId);
+                });
+            }
+
+            return row;
+        }
+
+        async openEditCarModal(carId) {
+            try {
+                const carDocRef = doc(this.db, 'cars', carId);
+                const carDoc = await getDoc(carDocRef);
+                if (!carDoc.exists()) {
+                    alert('Car not found!');
+                    return;
+                }
+
+                const car = carDoc.data();
+                
+                // Populate the form with car data
+                document.getElementById('editCarId').value = carId;
+                document.getElementById('editCarModel').value = car.name || car.model || '';
+                document.getElementById('editCarType').value = car.type || '';
+                document.getElementById('editCarBrand').value = car.brand || '';
+                document.getElementById('editCarPlate').value = car.plate || '';
+                document.getElementById('editCarSeater').value = car.seater || '';
+                document.getElementById('editCarTransmission').value = car.transmission || 'Automatic';
+                document.getElementById('editCarStatus').value = car.status || 'Available';
+                document.getElementById('editCarAvailability').value = car.available ? 'Yes' : 'No';
+                document.getElementById('editCarPrice').value = car.price || '';
+                document.getElementById('editCarDescription').value = car.description || '';
+                
+                // Set image preview
+                const preview = document.getElementById('editImagePreview');
+                if (car.mainImage || car.imageBase64) {
+                    preview.innerHTML = `<img src="${car.mainImage || car.imageBase64}" />`;
+                } else {
+                    preview.innerText = "No image selected";
+                }
+                
+                // Show the modal
+                document.getElementById('editCarModal').classList.add('show');
+                
+            } catch (error) {
+                console.error('Error loading car for editing:', error);
+                alert('Error loading car details: ' + error.message);
+            }
+        }
+
+        async updateCar(e) {
+            e.preventDefault();
+            console.log('Updating car...');
+            
+            const carId = document.getElementById('editCarId').value;
+            const carData = {
+                name: document.getElementById("editCarModel").value,
+                model: document.getElementById("editCarModel").value,
+                type: document.getElementById("editCarType").value,
+                brand: document.getElementById("editCarBrand").value,
+                plate: document.getElementById("editCarPlate").value,
+                seater: parseInt(document.getElementById("editCarSeater").value),
+                transmission: document.getElementById("editCarTransmission").value,
+                status: document.getElementById("editCarStatus").value,
+                available: document.getElementById("editCarAvailability").value === "Yes",
+                price: parseInt(document.getElementById("editCarPrice").value),
+                description: document.getElementById("editCarDescription").value || `${document.getElementById("editCarModel").value} - A comfortable car for your travel needs.`,
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                console.log('Updating car in Firebase...');
+                
+                const submitBtn = document.querySelector('#editCarForm button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Updating Car...';
+                    submitBtn.disabled = true;
+                }
+
+                // Handle image conversion and storage in Firestore as base64
+                const imageFile = document.getElementById("editCarImage").files[0];
+                if (imageFile) {
+                    console.log('Converting image to base64...');
+                    const base64String = await this.getBase64(imageFile);
+                    carData.imageBase64 = base64String;
+                    carData.mainImage = base64String;
+                }
+
+                // Update car in Firestore
+                await updateDoc(doc(this.db, 'cars', carId), carData);
+                console.log('Car updated with ID:', carId);
+
+                alert('Car updated successfully!');
+                
+                const editCarModal = document.getElementById("editCarModal");
+                if (editCarModal) editCarModal.classList.remove("show");
+                
+                await this.loadCars();
+                
+            } catch (error) {
+                console.error('Error updating car:', error);
+                alert('Error updating car: ' + error.message);
+            } finally {
+                const submitBtn = document.querySelector('#editCarForm button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Update Car';
+                    submitBtn.disabled = false;
+                }
+            }
+        }
+
+        async addCar(e) {
+            e.preventDefault();
+            console.log('Adding new car...');
+            
+            const carData = {
+                name: document.getElementById("carModel").value,
+                model: document.getElementById("carModel").value,
+                type: document.getElementById("carType").value,
+                brand: document.getElementById("carBrand").value,
+                plate: document.getElementById("carPlate").value,
+                seater: parseInt(document.getElementById("carSeater").value),
+                transmission: document.getElementById("carTransmission").value,
+                status: document.getElementById("carStatus").value,
+                available: document.getElementById("carAvailability").value === "Yes",
+                price: parseInt(document.getElementById("carPrice").value),
+                description: document.getElementById("carDescription").value || `${document.getElementById("carModel").value} - A comfortable car for your travel needs.`,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                console.log('Saving car to Firebase...');
+                
+                const submitBtn = document.querySelector('#addCarForm button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Adding Car...';
+                    submitBtn.disabled = true;
+                }
+
+                // Handle image conversion and storage in Firestore as base64
+                const imageFile = document.getElementById("carImage").files[0];
+                if (imageFile) {
+                    console.log('Converting image to base64...');
+                    const base64String = await this.getBase64(imageFile);
+                    carData.imageBase64 = base64String;
+                    carData.mainImage = base64String;
+                }
+
+                // Add car to Firestore
+                const carRef = await addDoc(collection(this.db, 'cars'), carData);
+                const carId = carRef.id;
+                console.log('Car added with ID:', carId);
+
+                alert('Car added successfully!');
+                
+                const addCarModal = document.getElementById("addCarModal");
+                if (addCarModal) addCarModal.classList.remove("show");
+                
+                const addCarForm = document.getElementById("addCarForm");
+                if (addCarForm) addCarForm.reset();
+                
+                const imagePreview = document.getElementById("imagePreview");
+                if (imagePreview) imagePreview.innerText = "No image selected";
+                
+                await this.loadCars();
+                
+            } catch (error) {
+                console.error('Error adding car:', error);
+                alert('Error adding car: ' + error.message);
+            } finally {
+                const submitBtn = document.querySelector('#addCarForm button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Add Car';
+                    submitBtn.disabled = false;
+                }
+            }
+        }
+
+        // Helper method to convert image file to base64
+        getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async removeSelectedCars() {
+            if (this.selectedCars.size === 0) {
+                alert('Please select cars to remove');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to remove ${this.selectedCars.size} car(s)?`)) {
+                return;
+            }
+
+            try {
+                const deletePromises = Array.from(this.selectedCars).map(id => 
+                    deleteDoc(doc(this.db, 'cars', id))
+                );
+                
+                await Promise.all(deletePromises);
+                this.selectedCars.clear();
+                const selectAll = document.getElementById('selectAll');
+                if (selectAll) selectAll.checked = false;
+                await this.loadCars();
+                alert('Cars removed successfully!');
+            } catch (error) {
+                console.error('Error removing cars:', error);
+                alert('Error removing cars: ' + error.message);
+            }
+        }
+
+        async loadReservations() {
+            console.log('Loading reservations...');
+            try {
+                const reservationsLoading = document.getElementById('reservations-loading');
+                const reservationTable = document.getElementById('reservationTable');
+                
+                if (reservationsLoading) reservationsLoading.style.display = 'block';
+                if (reservationTable) reservationTable.style.display = 'none';
+
+                // Load only pending reservations from reservations collection
+                const snapshot = await getDocs(
+                    query(collection(this.db, 'reservations'), 
+                    where('adminStatus', '==', 'pending'),
+                    orderBy('createdAt', 'desc'))
+                );
+                
+                console.log('Found', snapshot.size, 'pending reservations');
+                
+                const tbody = document.getElementById('reservations-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--muted);">No pending reservations found.</td></tr>';
+                    } else {
+                        // FIXED: Get user details for each reservation
+                        const reservationsWithUserDetails = await Promise.all(
+                            snapshot.docs.map(async (docSnapshot) => {
+                                const reservation = docSnapshot.data();
+                                const reservationId = docSnapshot.id;
+                                
+                                // Try to get user details from the reservation first
+                                let userName = reservation.userName || 'N/A';
+                                let userEmail = reservation.userEmail || 'N/A';
+                                
+                                // If not available in reservation, try to fetch from users collection
+                                if ((!userName || userName === 'N/A') && reservation.userId) {
+                                    try {
+                                        const userDocRef = doc(this.db, 'users', reservation.userId);
+                                        const userDoc = await getDoc(userDocRef);
+                                        if (userDoc.exists()) {
+                                            const userData = userDoc.data();
+                                            userName = userData.fullName || userData.name || 'N/A';
+                                            userEmail = userData.email || 'N/A';
+                                        }
+                                    } catch (error) {
+                                        console.error('Error fetching user details:', error);
+                                    }
+                                }
+                                
+                                return {
+                                    id: reservationId,
+                                    ...reservation,
+                                    userName,
+                                    userEmail
+                                };
+                            })
+                        );
+                        
+                        reservationsWithUserDetails.forEach(reservation => {
+                            const row = this.createReservationRow(reservation.id, reservation);
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+
+                if (reservationsLoading) reservationsLoading.style.display = 'none';
+                if (reservationTable) reservationTable.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading reservations:', error);
+                const reservationsLoading = document.getElementById('reservations-loading');
+                if (reservationsLoading) {
+                    reservationsLoading.innerHTML = `<p>Error loading reservations: ${error.message}</p>`;
+                }
+            }
+        }
+
+        createReservationRow(id, reservation) {
+            const row = document.createElement('tr');
+            
+            // Format dates for display
+            let startDate = 'N/A';
+            let endDate = 'N/A';
+            
+            try {
+                if (reservation.startDate && reservation.startDate.toDate) {
+                    startDate = reservation.startDate.toDate().toLocaleDateString();
+                }
+                if (reservation.endDate && reservation.endDate.toDate) {
+                    endDate = reservation.endDate.toDate().toLocaleDateString();
+                }
+            } catch (dateError) {
+                console.error('Error formatting dates:', dateError);
+            }
+            
+            // Check if proof of payment exists (both base64 and URL)
+            const hasProofOfPayment = !!reservation.proofOfPaymentBase64 || !!reservation.proofOfPaymentUrl;
+            
+            row.innerHTML = `
+                <td>${id.substring(0, 8)}</td>
+                <td>${reservation.userName || 'N/A'}</td>
+                <td>${reservation.userEmail || 'N/A'}</td>
+                <td>${reservation.carName || 'N/A'}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>₱${reservation.totalPrice ? reservation.totalPrice.toLocaleString() : 'N/A'}</td>
+                <td>${reservation.paymentMethod === 'onhand' ? 'Pay on Hand' : 'GCash'}</td>
+                <td>
+                    <span class="status-badge status-pending">Pending</span>
+                    ${hasProofOfPayment ? '<br><span class="proof-badge" style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 8px; font-size: 10px;">Proof Uploaded</span>' : ''}
+                </td>
+                <td>
+                    ${hasProofOfPayment ? 
+                        `<button class="btn btn-info view-proof" data-base64="${reservation.proofOfPaymentBase64 || ''}" data-url="${reservation.proofOfPaymentUrl || ''}" style="margin-bottom: 5px;">View Proof</button><br>` : 
+                        ''
+                    }
+                    <button class="btn btn-success approve-reservation" data-id="${id}" data-car-id="${reservation.carId}">Approve</button>
+                    <button class="btn btn-danger cancel-reservation" data-id="${id}">Cancel</button>
+                </td>
+            `;
+
+            // Add event listeners
+            const approveBtn = row.querySelector('.approve-reservation');
+            const cancelBtn = row.querySelector('.cancel-reservation');
+            const viewProofBtn = row.querySelector('.view-proof');
+            
+            if (approveBtn) approveBtn.addEventListener('click', () => this.approveReservation(id, reservation.carId));
+            if (cancelBtn) cancelBtn.addEventListener('click', () => this.cancelReservation(id));
+            if (viewProofBtn) viewProofBtn.addEventListener('click', () => this.viewProofOfPayment(
+                viewProofBtn.getAttribute('data-base64'), 
+                viewProofBtn.getAttribute('data-url')
+            ));
+
+            return row;
+        }
+
+        viewProofOfPayment(base64Data, urlData) {
+            if (base64Data) {
+                // Open base64 image in new window
+                const newWindow = window.open();
+                newWindow.document.write(`<img src="${base64Data}" style="max-width: 100%; height: auto;" />`);
+            } else if (urlData) {
+                // Open URL in new window (fallback)
+                window.open(urlData, '_blank');
+            } else {
+                alert('No proof of payment available');
+            }
+        }
+
+        async approveReservation(id, carId) {
+            if (!confirm('Are you sure you want to approve this reservation? This will mark the car as rented.')) {
+                return;
+            }
+
+            try {
+                // First check if the car is already rented for these dates
+                const reservationDocRef = doc(this.db, 'reservations', id);
+                const reservationDoc = await getDoc(reservationDocRef);
+                const reservation = reservationDoc.data();
+                
+                if (!reservation) {
+                    alert('Reservation not found!');
+                    return;
+                }
+                
+                // Get current date for active rental check
+                const today = new Date();
+                
+                // Check for ACTIVE approved reservations (not just any approved reservations)
+                const approvedReservationsSnapshot = await getDocs(
+                    query(collection(this.db, 'reservations'),
+                    where('carId', '==', carId),
+                    where('adminStatus', '==', 'approved'))
+                );
+                
+                let hasOverlap = false;
+                let overlappingReservationId = null;
+                
+                approvedReservationsSnapshot.forEach(docSnapshot => {
+                    // Skip the current reservation we're trying to approve
+                    if (docSnapshot.id === id) return;
+                    
+                    const existingReservation = docSnapshot.data();
+                    
+                    // Check if this approved reservation is currently active or overlaps
+                    if (existingReservation.startDate && existingReservation.endDate) {
+                        const existingStart = existingReservation.startDate.toDate();
+                        const existingEnd = existingReservation.endDate.toDate();
+                        const newStart = reservation.startDate.toDate();
+                        const newEnd = reservation.endDate.toDate();
+                        
+                        // Check for date overlap
+                        if ((newStart <= existingEnd && newEnd >= existingStart)) {
+                            // Check if this overlapping reservation is still active
+                            if (existingEnd >= today) {
+                                hasOverlap = true;
+                                overlappingReservationId = docSnapshot.id;
+                            }
+                        }
+                    }
+                });
+                
+                if (hasOverlap) {
+                    alert('This car is already rented for the selected dates. Please choose different dates.');
+                    return;
+                }
+                
+                // Update reservation status
+                await updateDoc(doc(this.db, 'reservations', id), {
+                    adminStatus: 'approved',
+                    status: 'approved',
+                    approvedAt: serverTimestamp()
+                });
+                
+                // Mark car as rented
+                await updateDoc(doc(this.db, 'cars', carId), {
+                    status: 'Rented',
+                    available: false
+                });
+                
+                await this.loadReservations();
+                await this.loadDashboard();
+                await this.loadCars();
+                alert('Reservation approved successfully! Car marked as rented.');
+                
+            } catch (error) {
+                console.error('Error approving reservation:', error);
+                alert('Error approving reservation: ' + error.message);
+            }
+        }
+
+        async cancelReservation(id) {
+            if (!confirm('Are you sure you want to cancel this reservation?')) {
+                return;
+            }
+
+            try {
+                await updateDoc(doc(this.db, 'reservations', id), {
+                    adminStatus: 'cancelled',
+                    status: 'cancelled',
+                    cancelledAt: serverTimestamp()
+                });
+                
+                await this.loadReservations();
+                await this.loadDashboard();
+                alert('Reservation cancelled successfully!');
+                
+            } catch (error) {
+                console.error('Error cancelling reservation:', error);
+                alert('Error cancelling reservation: ' + error.message);
+            }
+        }
+
+        async loadUsers() {
+            console.log('Loading users...');
+            try {
+                const usersLoading = document.getElementById('users-loading');
+                const usersTable = document.getElementById('usersTable');
+                
+                if (usersLoading) usersLoading.style.display = 'block';
+                if (usersTable) usersTable.style.display = 'none';
+
+                // Load users from Firestore
+                const snapshot = await getDocs(
+                    query(collection(this.db, 'users'), 
+                    orderBy('createdAt', 'desc'))
+                );
+                
+                console.log('Found', snapshot.size, 'users');
+                
+                const tbody = document.getElementById('users-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    this.allUsers = [];
+
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No users found.</td></tr>';
+                    } else {
+                        snapshot.forEach(docSnapshot => {
+                            const user = docSnapshot.data();
+                            user.id = docSnapshot.id;
+                            this.allUsers.push(user);
+                            const row = this.createUserRow(docSnapshot.id, user);
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+
+                if (usersLoading) usersLoading.style.display = 'none';
+                if (usersTable) usersTable.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading users:', error);
+                const usersLoading = document.getElementById('users-loading');
+                if (usersLoading) {
+                    usersLoading.innerHTML = `<p>Error loading users: ${error.message}</p>`;
+                }
+            }
+        }
+
+        createUserRow(id, user) {
+            const row = document.createElement('tr');
+            
+            // Format registration date
+            let regDate = 'N/A';
+            try {
+                if (user.createdAt && user.createdAt.toDate) {
+                    regDate = user.createdAt.toDate().toLocaleDateString();
+                }
+            } catch (dateError) {
+                console.error('Error formatting date:', dateError);
+            }
+            
+            row.innerHTML = `
+                <td>${id.substring(0, 8)}</td>
+                <td>${user.fullName || user.name || 'N/A'}</td>
+                <td>${user.email || 'N/A'}</td>
+                <td>${user.contactNumber || user.phone || 'N/A'}</td>
+                <td>${user.licenseNumber || user.driverLicense || 'N/A'}</td>
+                <td>${regDate}</td>
+                <td>
+                    <span class="status-badge status-active">Active</span>
+                </td>
+                <td>
+                    <button class="btn btn-danger remove-user" data-id="${id}" data-name="${user.fullName || user.name || 'User'}">Remove</button>
+                </td>
+            `;
+
+            // Add event listener for remove button
+            const removeBtn = row.querySelector('.remove-user');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    const userId = removeBtn.getAttribute('data-id');
+                    const userName = removeBtn.getAttribute('data-name');
+                    this.removeUser(userId, userName);
+                });
+            }
+
+            return row;
+        }
+
+        async removeUser(userId, userName) {
+            if (!confirm(`Are you sure you want to remove user "${userName}"? This action will delete their account and all associated data.`)) {
+                return;
+            }
+
+            try {
+                // Delete user document from Firestore
+                await deleteDoc(doc(this.db, 'users', userId));
+                
+                // Also delete any reservations/rentals associated with this user
+                const userReservationsSnapshot = await getDocs(
+                    query(collection(this.db, 'reservations'), 
+                    where('userId', '==', userId))
+                );
+                
+                const deleteReservationPromises = userReservationsSnapshot.docs.map(doc => 
+                    deleteDoc(doc.ref)
+                );
+                
+                await Promise.all(deleteReservationPromises);
+                
+                alert(`User "${userName}" has been removed successfully!`);
+                await this.loadUsers();
+                
+            } catch (error) {
+                console.error('Error removing user:', error);
+                alert('Error removing user: ' + error.message);
+            }
+        }
+
+        searchUsers(searchTerm) {
+            const tbody = document.getElementById('users-tbody');
+            if (!tbody) return;
+
+            if (!searchTerm.trim()) {
+                // If search is empty, show all users
+                tbody.innerHTML = '';
+                this.allUsers.forEach(user => {
+                    const row = this.createUserRow(user.id, user);
+                    tbody.appendChild(row);
+                });
+                return;
+            }
+
+            const filteredUsers = this.allUsers.filter(user => {
+                const searchLower = searchTerm.toLowerCase();
+                const userName = (user.fullName || user.name || '').toLowerCase();
+                const userEmail = (user.email || '').toLowerCase();
+                const userPhone = (user.contactNumber || user.phone || '').toLowerCase();
+                const userLicense = (user.licenseNumber || user.driverLicense || '').toLowerCase();
+                
+                return userName.includes(searchLower) || 
+                       userEmail.includes(searchLower) || 
+                       userPhone.includes(searchLower) ||
+                       userLicense.includes(searchLower);
+            });
+
+            tbody.innerHTML = '';
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--muted);">No users found matching your search.</td></tr>';
+            } else {
+                filteredUsers.forEach(user => {
+                    const row = this.createUserRow(user.id, user);
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async loadRentals() {
+            console.log('Loading rentals...');
+            try {
+                const rentalsLoading = document.getElementById('rentals-loading');
+                const rentalsTable = document.getElementById('rentalsTable');
+                
+                if (rentalsLoading) rentalsLoading.style.display = 'block';
+                if (rentalsTable) rentalsTable.style.display = 'none';
+
+                // Load from reservations collection (approved rentals)
+                const snapshot = await getDocs(
+                    query(collection(this.db, 'reservations'), 
+                    where('adminStatus', '==', 'approved'),
+                    orderBy('createdAt', 'desc'))
+                );
+                
+                console.log('Found', snapshot.size, 'approved rentals');
+                
+                const tbody = document.getElementById('rentals-tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    this.allRentals = [];
+
+                    if (snapshot.empty) {
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--muted);">No rental history found.</td></tr>';
+                    } else {
+                        // FIXED: Get customer names for rentals
+                        const rentalsWithCustomerNames = await Promise.all(
+                            snapshot.docs.map(async (docSnapshot) => {
+                                const rental = docSnapshot.data();
+                                const rentalId = docSnapshot.id;
+                                
+                                let customerName = rental.userName || 'N/A';
+                                
+                                // If not available in rental data, try to fetch from users collection
+                                if ((!customerName || customerName === 'N/A') && rental.userId) {
+                                    try {
+                                        const userDocRef = doc(this.db, 'users', rental.userId);
+                                        const userDoc = await getDoc(userDocRef);
+                                        if (userDoc.exists()) {
+                                            const userData = userDoc.data();
+                                            customerName = userData.fullName || userData.name || 'N/A';
+                                        }
+                                    } catch (error) {
+                                        console.error('Error fetching user details:', error);
+                                    }
+                                }
+                                
+                                return {
+                                    id: rentalId,
+                                    ...rental,
+                                    customerName
+                                };
+                            })
+                        );
+                        
+                        rentalsWithCustomerNames.forEach(rental => {
+                            this.allRentals.push(rental);
+                            const row = this.createRentalRow(rental.id, rental);
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+
+                if (rentalsLoading) rentalsLoading.style.display = 'none';
+                if (rentalsTable) rentalsTable.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading rentals:', error);
+                const rentalsLoading = document.getElementById('rentals-loading');
+                if (rentalsLoading) {
+                    rentalsLoading.innerHTML = `<p>Error loading rentals: ${error.message}</p>`;
+                }
+            }
+        }
+
+        createRentalRow(id, rental) {
+            const row = document.createElement('tr');
+            
+            // Format dates
+            let startDate = 'N/A';
+            let endDate = 'N/A';
+            
+            try {
+                if (rental.startDate && rental.startDate.toDate) {
+                    startDate = rental.startDate.toDate().toLocaleDateString();
+                }
+                if (rental.endDate && rental.endDate.toDate) {
+                    endDate = rental.endDate.toDate().toLocaleDateString();
+                }
+            } catch (dateError) {
+                console.error('Error formatting dates:', dateError);
+            }
+            
+            // Determine status based on dates
+            const today = new Date();
+            let status = 'Active';
+            let statusClass = 'status-active';
+            
+            try {
+                if (rental.endDate && rental.endDate.toDate) {
+                    const endDateObj = rental.endDate.toDate();
+                    if (today > endDateObj) {
+                        status = 'Completed';
+                        statusClass = 'status-completed';
+                    }
+                }
+            } catch (dateError) {
+                console.error('Error determining status:', dateError);
+            }
+            
+            // FIXED: Determine payment status with detailed information
+            let paymentStatus = 'Paid';
+            let paymentStatusClass = 'payment-paid-hand';
+            
+            // Check if payment method is stored in the rental data
+            if (rental.paymentMethod) {
+                switch(rental.paymentMethod) {
+                    case 'gcash':
+                        paymentStatus = 'Paid via GCash';
+                        paymentStatusClass = 'payment-paid-gcash';
+                        break;
+                    case 'onhand':
+                        paymentStatus = 'Paid on Hand';
+                        paymentStatusClass = 'payment-paid-hand';
+                        break;
+                    case 'pending':
+                        paymentStatus = 'Waiting for Payment';
+                        paymentStatusClass = 'payment-pending';
+                        break;
+                    default:
+                        paymentStatus = 'Paid';
+                        paymentStatusClass = 'payment-paid-hand';
+                }
+            } else if (rental.paymentStatus) {
+                // If payment method is not available but paymentStatus is
+                switch(rental.paymentStatus) {
+                    case 'pending':
+                        paymentStatus = 'Waiting for Payment';
+                        paymentStatusClass = 'payment-pending';
+                        break;
+                    case 'failed':
+                        paymentStatus = 'Payment Failed';
+                        paymentStatusClass = 'payment-failed';
+                        break;
+                    default:
+                        paymentStatus = 'Paid';
+                        paymentStatusClass = 'payment-paid-hand';
+                }
+            }
+            
+            row.innerHTML = `
+                <td><input class="rental-select" type="checkbox" data-id="${id}"></td>
+                <td>${id.substring(0, 8)}</td>
+                <td>${rental.customerName || rental.userName || 'N/A'}</td>
+                <td>${rental.carName || 'N/A'}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>₱${rental.totalPrice ? rental.totalPrice.toLocaleString() : 'N/A'}</td>
+                <td>
+                    <span class="status-badge ${statusClass}">${status}</span>
+                </td>
+                <td>
+                    <span class="payment-status-badge ${paymentStatusClass}">${paymentStatus}</span>
+                </td>
+            `;
+
+            // Add event listener for rental selection
+            const checkbox = row.querySelector('.rental-select');
+            if (checkbox) {
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        this.selectedRentals.add(id);
+                    } else {
+                        this.selectedRentals.delete(id);
+                        const selectAllRentals = document.getElementById('selectAllRentals');
+                        if (selectAllRentals) selectAllRentals.checked = false;
+                    }
+                });
+            }
+
+            return row;
+        }
+
+        searchRentals(searchTerm) {
+            const tbody = document.getElementById('rentals-tbody');
+            if (!tbody) return;
+
+            if (!searchTerm.trim()) {
+                // If search is empty, show all rentals
+                tbody.innerHTML = '';
+                this.allRentals.forEach(rental => {
+                    const row = this.createRentalRow(rental.id, rental);
+                    tbody.appendChild(row);
+                });
+                return;
+            }
+
+            const filteredRentals = this.allRentals.filter(rental => {
+                const searchLower = searchTerm.toLowerCase();
+                const customerName = (rental.customerName || rental.userName || '').toLowerCase();
+                const carName = (rental.carName || '').toLowerCase();
+                
+                return customerName.includes(searchLower) || 
+                       carName.includes(searchLower);
+            });
+
+            tbody.innerHTML = '';
+            if (filteredRentals.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--muted);">No rentals found matching your search.</td></tr>';
+            } else {
+                filteredRentals.forEach(rental => {
+                    const row = this.createRentalRow(rental.id, rental);
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async removeSelectedRentals() {
+            if (this.selectedRentals.size === 0) {
+                alert('Please select rental records to remove');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to remove ${this.selectedRentals.size} rental record(s)? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const deletePromises = Array.from(this.selectedRentals).map(id => 
+                    deleteDoc(doc(this.db, 'reservations', id))
+                );
+                
+                await Promise.all(deletePromises);
+                this.selectedRentals.clear();
+                const selectAllRentals = document.getElementById('selectAllRentals');
+                if (selectAllRentals) selectAllRentals.checked = false;
+                await this.loadRentals();
+                alert('Rental records removed successfully!');
+            } catch (error) {
+                console.error('Error removing rental records:', error);
+                alert('Error removing rental records: ' + error.message);
+            }
+        }
+    }
+
+    // ===== INITIALIZE WHEN DOM LOADS =====
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, creating admin panel instance...');
+        window.carRentalAdmin = new CarRentalAdmin();
+    });
+  </script>
+
+  <style>
+    /* --- Your existing CSS --- */
+    :root{
+      --blueA:#1e90ff;
+      --blueB:#007acc;
+      --light:#f5f8fa;
+      --white:#ffffff;
+      --muted:#777;
+      --text:#222;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:var(--light);color:var(--text)}
+
+    .navbar{background:linear-gradient(90deg,var(--blueA),var(--blueB));color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 15px rgba(30,144,255,0.18)}
+    .navbar h1{font-size:18px;margin:0}
+    .btn{border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+    .btn-red{background:#333;color:#fff}
+    .btn-red:hover{background:#555}
+    .btn-success{background:#28a745;color:#fff}
+    .btn-success:hover{background:#218838}
+    .btn-danger{background:#dc3545;color:#fff}
+    .btn-danger:hover{background:#c82333}
+    .btn-warning{background:#ffc107;color:#212529}
+    .btn-warning:hover{background:#e0a800}
+    .btn-info{background:#17a2b8;color:#fff}
+    .btn-info:hover{background:#138496}
+
+    .container{display:flex;gap:20px;padding:22px}
+    .sidebar{width:220px;background:var(--white);border-radius:12px;padding:18px;box-shadow:0 3px 15px rgba(0,0,0,0.08)}
+    .sidebar h2{color:var(--blueB);text-align:center;margin:0 0 10px;font-size:18px}
+    .sidebar ul{list-style:none;padding:0;margin:0;display:block}
+    .sidebar li{padding:10px;border-radius:8px;margin:8px 0;color:var(--text);cursor:pointer;transition:all .18s ease;background:transparent}
+    .sidebar li:hover{transform:translateX(6px);background:linear-gradient(90deg,var(--blueA),var(--blueB));color:#fff}
+    .sidebar li.active{background:linear-gradient(90deg,var(--blueA),var(--blueB));color:#fff;box-shadow:0 4px 12px rgba(30,144,255,0.12)}
+
+    .content{flex:1;display:flex;flex-direction:column;gap:24px}
+    .section{background:var(--white);border-radius:12px;padding:18px;box-shadow:0 0 15px rgba(0,0,0,0.06)}
+    .section h2{color:var(--blueB);margin:0 0 12px}
+    .actions{margin-bottom:12px;display:flex;gap:10px;align-items:center}
+    .btn-glow{background:linear-gradient(90deg,var(--blueA),#00bfff);color:#fff;box-shadow:0 0 10px rgba(30,144,255,0.18);border-radius:8px;padding:8px 12px}
+    .btn-gray{background:#e6e9ee;color:var(--text);border-radius:8px;padding:8px 12px}
+    .btn-glow:hover{transform:scale(1.03)}
+
+    .data-table{width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden}
+    .data-table th, .data-table td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left}
+    .data-table th{background:linear-gradient(90deg,var(--blueA),var(--blueB));color:#fff}
+    .data-table tbody tr:nth-child(even){background:#fbfdff}
+
+    .hidden{display:none}
+    .visible{display:block}
+
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .18s ease}
+    .modal.show{opacity:1;pointer-events:auto}
+    .modal-card{width:680px;max-width:95%;background:var(--white);border-radius:12px;padding:20px 22px;box-shadow:0 10px 28px rgba(0,0,0,0.12);transform:translateY(10px);transition:transform .2s ease;position:relative}
+    .modal.show .modal-card{transform:translateY(0)}
+
+    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    label{font-weight:600;color:var(--text);font-size:14px}
+    input[type="text"], input[type="number"], select, input[type="file"]{padding:10px;border-radius:8px;border:1px solid #d6e6fb;background:#fbfeff;outline:none;}
+    input:focus, select:focus{box-shadow:0 0 6px rgba(30,144,255,0.12);border-color:var(--blueB)}
+
+    .image-preview{display:flex;align-items:center;justify-content:center;background:#f5f8fa;border:1px dashed #d9eafc;border-radius:8px;padding:8px;color:var(--muted);font-size:13px;min-height:80px}
+    .image-preview img{max-width:100%;max-height:160px;border-radius:8px;object-fit:cover}
+
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+
+    @media (max-width:720px){
+      .form-grid{grid-template-columns:1fr}
+      .modal-card{padding:16px}
+    }
+
+    .thumb{width:70px;height:46px;object-fit:cover;border-radius:6px}
+    footer{padding:12px;text-align:center;color:var(--muted);background:transparent}
+
+    /* Loading Styles */
+    .loading{text-align:center;padding:20px;color:var(--muted)}
+    .loading i{font-size:24px;margin-bottom:10px}
+
+    /* Status Badges */
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-approved {
+      background: #d1edff;
+      color: #004085;
+    }
+    .status-completed {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-cancelled {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-active {
+      background: #d1edff;
+      color: #004085;
+    }
+    .status-rented {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-available {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-maintenance {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    /* Payment Status Badges */
+    .payment-status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .payment-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .payment-paid-gcash {
+      background: #d1edff;
+      color: #004085;
+    }
+    .payment-paid-hand {
+      background: #d4edda;
+      color: #155724;
+    }
+    .payment-failed {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* Proof of Payment Badge */
+    .proof-badge {
+      background: #d4edda;
+      color: #155724;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 10px;
+      margin-top: 2px;
+      display: inline-block;
+    }
+
+    /* Dashboard Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+      text-align: center;
+      border-left: 4px solid var(--blueA);
+    }
+    .stat-card h3 {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--blueB);
+      margin: 0;
+    }
+    .stat-card .subtext {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 5px 0 0;
+    }
+
+    /* Authentication Error Styles */
+    .auth-error-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: var(--light);
+    }
+    .auth-error-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+    .auth-error-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      color: #dc3545;
+    }
+    .auth-error-title {
+      color: var(--blueB);
+      margin-bottom: 15px;
+    }
+    .auth-error-message {
+      color: var(--muted);
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    /* Search Input Styles */
+    .search-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #d6e6fb;
+      background: #fbfeff;
+      outline: none;
+      font-size: 14px;
+    }
+    .search-input:focus {
+      box-shadow: 0 0 6px rgba(30,144,255,0.12);
+      border-color: var(--blueB);
+    }
+  </style>
+</head>
+<body>
+  <!-- Authentication Error Container (Hidden by default) -->
+  <div id="authErrorContainer" class="auth-error-container" style="display: none;">
+    <div class="auth-error-card">
+      <div class="auth-error-icon">🚫</div>
+      <h2 class="auth-error-title">Access Denied</h2>
+      <p class="auth-error-message" id="authErrorMessage">You don't have permission to access the admin panel. Please log in with admin credentials.</p>
+      <button id="goToLoginBtn" class="btn btn-glow">Go to Admin Login</button>
+    </div>
+  </div>
+
+  <!-- Main Admin Panel Content (Hidden by default until authenticated) -->
+  <div id="adminPanelContent" style="display: none;">
+    <header class="navbar">
+      <h1>Car Rental Admin Dashboard</h1>
+      <div>
+        <button class="btn btn-red" id="logout-btn">Logout</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <aside class="sidebar" aria-label="Admin menu">
+        <h2>Admin Menu</h2>
+        <ul>
+          <li class="active" data-section="dashboard">Dashboard</li>
+          <li data-section="cars">Cars</li>
+          <li data-section="reservations">Reservation Management</li>
+          <li data-section="users">Users</li>
+          <li data-section="rentals">Rental History</li>
+          <li data-section="account-settings">Account Settings</li>
+        </ul>
+      </aside>
+
+      <section class="content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="section visible">
+          <h2>Dashboard Overview</h2>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <h3>Total Users</h3>
+              <p class="value" id="total-users">0</p>
+              <p class="subtext">Registered Customers</p>
+            </div>
+            <div class="stat-card">
+              <h3>Active Rentals</h3>
+              <p class="value" id="active-rentals">0</p>
+              <p class="subtext">Currently Rented</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Revenue</h3>
+              <p class="value" id="total-revenue">₱0</p>
+              <p class="subtext">All Time</p>
+            </div>
+            <div class="stat-card">
+              <h3>Available Cars</h3>
+              <p class="value" id="available-cars">0</p>
+              <p class="subtext">Ready to Rent</p>
+            </div>
+          </div>
+          
+          <h3>Recent Active Rentals</h3>
+          <div class="loading" id="dashboard-loading">
+            <p>Loading dashboard data...</p>
+          </div>
+          
+          <table class="data-table" id="activeRentalsTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>Rental ID</th>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="active-rentals-tbody">
+              <!-- Active rentals will be loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cars Section -->
+        <div id="cars" class="section hidden">
+          <h2>Car Management</h2>
+          <div class="actions">
+            <button id="openAddCar" class="btn-glow">Add Car</button>
+            <button id="removeSelected" class="btn-gray">Remove Selected</button>
+          </div>
+          
+          <div class="loading" id="cars-loading">
+            <p>Loading cars...</p>
+          </div>
+          
+          <table class="data-table" id="carTable" style="display: none;">
+            <thead>
+              <tr>
+                <th><input id="selectAll" type="checkbox"></th>
+                <th>ID</th><th>Model</th><th>Type</th><th>Plate</th><th>Seater</th><th>Status</th><th>Availability</th><th>Price/Day</th><th>Photo</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cars-tbody">
+              <!-- Cars will be loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Reservations Section -->
+        <div id="reservations" class="section hidden">
+          <h2>Reservation Management</h2>
+          <div class="actions">
+            <button id="refresh-reservations" class="btn-glow">Refresh</button>
+          </div>
+          
+          <div class="loading" id="reservations-loading">
+            <p>Loading reservations...</p>
+          </div>
+          
+          <table class="data-table" id="reservationTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>ID</th><th>Customer Name</th><th>Email</th><th>Car</th><th>Start Date</th><th>End Date</th><th>Total Price</th><th>Payment Method</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reservations-tbody">
+              <!-- Reservations will be loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users" class="section hidden">
+          <h2>User Management</h2>
+          <div class="actions">
+            <button id="refresh-users" class="btn-glow">Refresh</button>
+          </div>
+          
+          <!-- User Search -->
+          <div class="search-container">
+            <input type="text" id="userSearch" class="search-input" placeholder="Search users by name, email, phone, or license number...">
+          </div>
+          
+          <div class="loading" id="users-loading">
+            <p>Loading users...</p>
+          </div>
+          
+          <table class="data-table" id="usersTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>License No.</th>
+                <th>Registration Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <!-- Users will be loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Rentals Section -->
+        <div id="rentals" class="section hidden">
+          <h2>Rental History</h2>
+          <div class="actions">
+            <button id="refresh-rentals" class="btn-glow">Refresh</button>
+            <button id="removeSelectedRentals" class="btn-gray">Delete Selected</button>
+          </div>
+          
+          <!-- Rental Search -->
+          <div class="search-container">
+            <input type="text" id="rentalSearch" class="search-input" placeholder="Search rentals by customer name or car name...">
+          </div>
+          
+          <div class="loading" id="rentals-loading">
+            <p>Loading rentals...</p>
+          </div>
+          
+          <table class="data-table" id="rentalsTable" style="display: none;">
+            <thead>
+              <tr>
+                <th><input id="selectAllRentals" type="checkbox"></th>
+                <th>Rental ID</th>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Payment Status</th>
+              </tr>
+            </thead>
+            <tbody id="rentals-tbody">
+              <!-- All rentals will be loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Account Settings Section -->
+        <div id="account-settings" class="section hidden">
+          <h2>Account Settings</h2>
+          <p>Redirecting to account settings page...</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Add Car Modal -->
+    <div id="addCarModal" class="modal" aria-hidden="true">
+      <div class="modal-card">
+        <h2>Add New Car</h2>
+        <form id="addCarForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="carModel">Model</label>
+              <input type="text" id="carModel" required>
+            </div>
+            <div class="form-group">
+              <label for="carType">Type</label>
+              <select id="carType" required>
+                <option value="">Select Type</option>
+                <option value="Sedan">Sedan</option>
+                <option value="SUV">SUV</option>
+                <option value="Hatchback">Hatchback</option>
+                <option value="MPV">MPV</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carBrand">Brand</label>
+              <select id="carBrand" required>
+                <option value="">Select Brand</option>
+                <option value="Toyota">Toyota</option>
+                <option value="Nissan">Nissan</option>
+                <option value="Mitsubishi">Mitsubishi</option>
+                <option value="Honda">Honda</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carPlate">Plate Number</label>
+              <input type="text" id="carPlate" required placeholder="ABC-1234">
+            </div>
+            <div class="form-group">
+              <label for="carSeater">Seater Capacity</label>
+              <select id="carSeater" required>
+                <option value="">Select Seats</option>
+                <option value="4">4 Seaters</option>
+                <option value="5">5 Seaters</option>
+                <option value="7">7 Seaters</option>
+                <option value="8">8 Seaters</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carTransmission">Transmission</label>
+              <select id="carTransmission" required>
+                <option value="Automatic">Automatic</option>
+                <option value="Manual">Manual</option>
+                <option value="Automatic/Manual">Automatic/Manual</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carStatus">Status</label>
+              <select id="carStatus">
+                <option value="Available">Available</option>
+                <option value="Rented">Rented</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carAvailability">Availability</label>
+              <select id="carAvailability">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carPrice">Price/Day (₱)</label>
+              <input type="number" id="carPrice" required min="1000" step="100">
+            </div>
+            <div class="form-group">
+              <label for="carDescription">Description</label>
+              <textarea id="carDescription" rows="3" placeholder="Describe the car features and condition..." style="padding:10px;border-radius:8px;border:1px solid #d6e6fb;background:#fbfeff;outline:none;resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="carImage">Car Photo</label>
+              <input type="file" id="carImage" accept="image/*">
+              <div id="imagePreview" class="image-preview">No image selected</div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="cancelAddCar" class="btn btn-gray">Cancel</button>
+            <button type="submit" class="btn btn-glow">Add Car</button>
+          </div>
+        </form>
+        <button id="closeAdd" style="position:absolute;top:10px;right:14px;font-size:18px;background:none;border:none;cursor:pointer">&times;</button>
+      </div>
+    </div>
+
+    <!-- Edit Car Modal -->
+    <div id="editCarModal" class="modal" aria-hidden="true">
+      <div class="modal-card">
+        <h2>Edit Car</h2>
+        <form id="editCarForm">
+          <input type="hidden" id="editCarId">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="editCarModel">Model</label>
+              <input type="text" id="editCarModel" required>
+            </div>
+            <div class="form-group">
+              <label for="editCarType">Type</label>
+              <select id="editCarType" required>
+                <option value="">Select Type</option>
+                <option value="Sedan">Sedan</option>
+                <option value="SUV">SUV</option>
+                <option value="Hatchback">Hatchback</option>
+                <option value="MPV">MPV</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarBrand">Brand</label>
+              <select id="editCarBrand" required>
+                <option value="">Select Brand</option>
+                <option value="Toyota">Toyota</option>
+                <option value="Nissan">Nissan</option>
+                <option value="Mitsubishi">Mitsubishi</option>
+                <option value="Honda">Honda</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarPlate">Plate Number</label>
+              <input type="text" id="editCarPlate" required placeholder="ABC-1234">
+            </div>
+            <div class="form-group">
+              <label for="editCarSeater">Seater Capacity</label>
+              <select id="editCarSeater" required>
+                <option value="">Select Seats</option>
+                <option value="4">4 Seaters</option>
+                <option value="5">5 Seaters</option>
+                <option value="7">7 Seaters</option>
+                <option value="8">8 Seaters</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarTransmission">Transmission</label>
+              <select id="editCarTransmission" required>
+                <option value="Automatic">Automatic</option>
+                <option value="Manual">Manual</option>
+                <option value="Automatic/Manual">Automatic/Manual</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarStatus">Status</label>
+              <select id="editCarStatus">
+                <option value="Available">Available</option>
+                <option value="Rented">Rented</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarAvailability">Availability</label>
+              <select id="editCarAvailability">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editCarPrice">Price/Day (₱)</label>
+              <input type="number" id="editCarPrice" required min="1000" step="100">
+            </div>
+            <div class="form-group">
+              <label for="editCarDescription">Description</label>
+              <textarea id="editCarDescription" rows="3" placeholder="Describe the car features and condition..." style="padding:10px;border-radius:8px;border:1px solid #d6e6fb;background:#fbfeff;outline:none;resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="editCarImage">Car Photo</label>
+              <input type="file" id="editCarImage" accept="image/*">
+              <div id="editImagePreview" class="image-preview">No image selected</div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="cancelEditCar" class="btn btn-gray">Cancel</button>
+            <button type="submit" class="btn btn-glow">Update Car</button>
+          </div>
+        </form>
+        <button id="closeEdit" style="position:absolute;top:10px;right:14px;font-size:18px;background:none;border:none;cursor:pointer">&times;</button>
+      </div>
+    </div>
+
+    <footer>© 2025 Car Rental System — Admin Panel</footer>
+  </div>
+
+  <!-- Font Awesome for icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRent - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Firebase Config -->
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+            authDomain: "carrental-4bdd4.firebaseapp.com",
+            projectId: "carrental-4bdd4",
+            storageBucket: "carrental-4bdd4.firebasestorage.app",
+            messagingSenderId: "318648301485",
+            appId: "1:318648301485:web:bc543198901a732b701324",
+            measurementId: "G-1C2E4MXEDK"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+    </script>
+
+    <style>
+        /* Your existing CSS styles remain the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            color: #111;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            min-height: 700px;
+            background: #fff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid #d0d0d0;
+        }
+
+        .left-panel {
+            flex: 1;
+            background: url('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center;
+            background-size: cover;
+            position: relative;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(97, 97, 97, 0.7);
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .form-card {
+            background: #f0f0f0;
+            border: 1px solid #b6b8bb9c;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #4da6ff;
+        }
+
+        .form-title {
+            font-size: 28px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #111;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #111;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            color: #111;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #4da6ff;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #4da6ff;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #005b96;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(77, 166, 255, 0.3);
+        }
+
+        .home-btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #4da6ff;
+            border-radius: 8px;
+            background: #fff;
+            color: #4da6ff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .home-btn:hover {
+            background: #4da6ff;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(77, 166, 255, 0.3);
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .form-footer a {
+            color: #4da6ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .form-footer a:hover {
+            color: #005b96;
+            text-decoration: underline;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 1rem 0;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            color: #111;
+        }
+
+        .remember-me input {
+            margin-right: 8px;
+            width: auto;
+            accent-color: #4da6ff;
+        }
+
+        .forgot-password {
+            color: #4da6ff;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .forgot-password:hover {
+            color: #005b96;
+            text-decoration: underline;
+        }
+
+        .admin-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+        }
+
+        .divider {
+            text-align: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ccc;
+            z-index: 1;
+        }
+
+        .divider span {
+            background: #f0f0f0;
+            padding: 0 15px;
+            position: relative;
+            z-index: 2;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .admin-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            color: #111;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .admin-btn:hover {
+            background: #f0f0f0;
+            border-color: #4da6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-icon {
+            font-size: 18px;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ffcdd2;
+            display: none;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c8e6c9;
+            display: none;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel"></div>
+        <div class="right-panel">
+            <div class="form-card">
+                <div class="logo">CarRental</div>
+                <h2 class="form-title">Welcome Back</h2>
+                
+                <!-- Error Message -->
+                <div id="error-message" class="error-message"></div>
+                
+                <!-- Success Message -->
+                <div id="success-message" class="success-message"></div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" placeholder="Enter your password" required>
+                    </div>
+                    <div class="remember-forgot">
+                        <div class="remember-me">
+                            <input type="checkbox" id="remember">
+                            <label for="remember">Remember me</label>
+                        </div>
+                        <a href="#" class="forgot-password" id="forgot-password">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="btn" id="login-btn">
+                        <span id="login-text">Login</span>
+                        <span id="login-spinner" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Logging in...
+                        </span>
+                    </button>
+
+                    <!-- Home Page Button -->
+                    <button type="button" class="home-btn" onclick="window.location.href='index.html'">
+                        Home Page
+                    </button>
+
+                    <!-- Admin Login Button -->
+                    <div class="admin-section">
+                        <div class="divider">
+                            <span>or</span>
+                        </div>
+                        <a href="admin.html" class="admin-btn">
+                            <span class="admin-icon">⚙️</span>
+                            Admin Login
+                        </a>
+                    </div>
+                </form>
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="registration.html">Register</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const loginForm = document.getElementById('login-form');
+        const loginEmail = document.getElementById('login-email');
+        const loginPassword = document.getElementById('login-password');
+        const loginBtn = document.getElementById('login-btn');
+        const loginText = document.getElementById('login-text');
+        const loginSpinner = document.getElementById('login-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const forgotPassword = document.getElementById('forgot-password');
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        // Hide all messages
+        function hideMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+
+        // Show loading state
+        function setLoading(isLoading) {
+            if (isLoading) {
+                loginBtn.classList.add('loading');
+                loginText.style.display = 'none';
+                loginSpinner.style.display = 'inline';
+            } else {
+                loginBtn.classList.remove('loading');
+                loginText.style.display = 'inline';
+                loginSpinner.style.display = 'none';
+            }
+        }
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value.trim();
+
+            // Basic validation
+            if (!email || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                hideMessages();
+
+                // Sign in with Firebase Authentication
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                showSuccess('Login successful! Redirecting...');
+                console.log('User logged in:', user.email);
+
+                // Redirect to user dashboard after successful login
+                setTimeout(() => {
+                    window.location.href = 'userdashboard.html';
+                }, 1000);
+
+            } catch (error) {
+                setLoading(false);
+                console.error('Login error:', error);
+                
+                // Handle specific Firebase auth errors
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        showError('Invalid email address');
+                        break;
+                    case 'auth/user-disabled':
+                        showError('This account has been disabled');
+                        break;
+                    case 'auth/user-not-found':
+                        showError('No account found with this email');
+                        break;
+                    case 'auth/wrong-password':
+                        showError('Incorrect password');
+                        break;
+                    case 'auth/too-many-requests':
+                        showError('Too many failed attempts. Please try again later');
+                        break;
+                    default:
+                        showError('Login failed. Please try again');
+                }
+            }
+        });
+
+        // Handle forgot password
+        forgotPassword.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            const email = loginEmail.value.trim();
+            
+            if (!email) {
+                showError('Please enter your email address to reset password');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                await auth.sendPasswordResetEmail(email);
+                showSuccess('Password reset email sent! Check your inbox');
+            } catch (error) {
+                console.error('Password reset error:', error);
+                showError('Failed to send reset email. Please try again');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Email validation function
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // Check if user is already logged in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log('User already logged in:', user.email);
+                // You can automatically redirect if you want
+                // window.location.href = 'userdashboard.html';
+            }
+        });
+
+        // Clear messages when user starts typing
+        loginEmail.addEventListener('input', hideMessages);
+        loginPassword.addEventListener('input', hideMessages);
+    </script>
+</body>
+</html>

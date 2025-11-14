@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Settings | Car Rental</title>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  
+  <!-- Firebase Config -->
+  <script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+      authDomain: "carrental-4bdd4.firebaseapp.com",
+      projectId: "carrental-4bdd4",
+      storageBucket: "carrental-4bdd4.firebasestorage.app",
+      messagingSenderId: "318648301485",
+      appId: "1:318648301485:web:bc543198901a732b701324",
+      measurementId: "G-1C2E4MXEDK"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+  </script>
+
+  <style>
+    /* Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    /* Layout */
+    body {
+      display: flex;
+      background: #f4f6f8;
+      color: #1a1a1a;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: linear-gradient(180deg, #1a1a1a, #2b2f33);
+      color: white;
+      width: 260px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      position: fixed;
+      animation: slideInLeft 0.6s ease-in-out;
+      box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .profile-info {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid #58a6ff;
+      margin-bottom: 10px;
+      transition: transform 0.3s ease;
+      object-fit: cover;
+    }
+
+    .profile-pic:hover {
+      transform: scale(1.08);
+    }
+
+    .profile-info h3 {
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .profile-info p {
+      font-size: 14px;
+      color: #b0b0b0;
+    }
+
+    /* Sidebar Nav */
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .sidebar-nav a {
+      color: #dbe4ee;
+      text-decoration: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: background 0.3s, transform 0.2s;
+      font-weight: 500;
+    }
+
+    .sidebar-nav a:hover,
+    .sidebar-nav .active {
+      background: #58a6ff;
+      color: #fff;
+      transform: translateX(6px);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 260px;
+      padding: 40px;
+      width: calc(100% - 260px);
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    header h1 {
+      color: #1a73e8;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #555;
+      margin-bottom: 35px;
+    }
+
+    /* Profile Section */
+    .profile-section {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      margin-bottom: 35px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .profile-section:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(88, 166, 255, 0.25);
+    }
+
+    .profile-section h2 {
+      color: #1a73e8;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #58a6ff;
+      display: inline-block;
+      padding-bottom: 5px;
+    }
+
+    /* Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-item label {
+      font-weight: 600;
+      color: #1a73e8;
+    }
+
+    .info-item input {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #cfd8dc;
+      background: #f8fafc;
+      color: #1a1a1a;
+      transition: all 0.3s ease;
+    }
+
+    .info-item input:focus {
+      border-color: #58a6ff;
+      transform: scale(1.02);
+      background: #ffffff;
+    }
+
+    /* Buttons */
+    .btn {
+      background: linear-gradient(90deg, #1a73e8, #58a6ff);
+      border: none;
+      color: white;
+      padding: 9px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      background: #0d6efd;
+      transform: translateY(-2px);
+    }
+
+    .edit-btn {
+      margin-top: 5px;
+      background: #f8fafc;
+      border: 1px solid #58a6ff;
+      color: #1a1a1a;
+    }
+
+    .edit-btn:hover {
+      background: #58a6ff;
+      color: #fff;
+    }
+
+    .save-btn {
+      background: #28a745;
+      display: none;
+    }
+
+    .save-btn:hover {
+      background: #218838;
+    }
+
+    .cancel-btn {
+      background: #dc3545;
+      display: none;
+    }
+
+    .cancel-btn:hover {
+      background: #c82333;
+    }
+
+    /* Password Section */
+    .password-group {
+      margin-bottom: 20px;
+    }
+
+    .password-group label {
+      color: #1a73e8;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .password-input {
+      position: relative;
+    }
+
+    .password-input input {
+      width: 100%;
+      padding: 8px 40px 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #cfd8dc;
+      background: #f8fafc;
+      color: #1a1a1a;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #1a1a1a;
+      cursor: pointer;
+      font-size: 13px;
+      transition: color 0.3s;
+    }
+
+    .toggle-password:hover {
+      color: #0d6efd;
+    }
+
+    .update-btn {
+      display: block;
+      margin: 35px auto 0;
+      width: 220px;
+      font-size: 15px;
+    }
+
+    /* Back Button */
+    .back-btn {
+      display: block;
+      background: #f8fafc;
+      border: 2px solid #58a6ff;
+      color: #1a1a1a;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin: 40px auto 0;
+      text-align: center;
+      width: fit-content;
+      text-decoration: none;
+    }
+
+    .back-btn:hover {
+      background: #58a6ff;
+      color: white;
+      transform: translateY(-3px);
+    }
+
+    /* Success/Error Messages */
+    .message {
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 500;
+      display: none;
+    }
+
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(-100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body { flex-direction: column; }
+
+      .sidebar {
+        position: relative;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        min-height: auto;
+        padding: 15px;
+      }
+
+      .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+      }
+
+      .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile-info">
+      <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Profile Photo" class="profile-pic" id="sidebarProfilePic" />
+      <h3 id="sidebarFullName">Loading...</h3>
+      <p id="sidebarUsername">Loading...</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="profile.html">Profile</a>
+      <a href="account-settings.html" class="active">Account Settings</a>
+      <a href="#" id="logoutLink">Log Out</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <h1>Account Settings</h1>
+      <p>Manage your personal information and password</p>
+    </header>
+
+    <!-- Success/Error Messages -->
+    <div id="successMessage" class="message success"></div>
+    <div id="errorMessage" class="message error"></div>
+
+    <!-- Personal Info -->
+    <section class="profile-section">
+      <h2>Personal Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Full Name</label>
+          <input type="text" id="fullName" disabled />
+          <div class="button-group">
+            <button class="btn edit-btn" id="editFullName">Edit</button>
+            <button class="btn save-btn" id="saveFullName">Save</button>
+            <button class="btn cancel-btn" id="cancelFullName">Cancel</button>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <label>Email</label>
+          <input type="email" id="email" disabled />
+          <div class="button-group">
+            <button class="btn edit-btn" id="editEmail">Edit</button>
+            <button class="btn save-btn" id="saveEmail">Save</button>
+            <button class="btn cancel-btn" id="cancelEmail">Cancel</button>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" disabled />
+          <div class="button-group">
+            <button class="btn edit-btn" id="editPhone">Edit</button>
+            <button class="btn save-btn" id="savePhone">Save</button>
+            <button class="btn cancel-btn" id="cancelPhone">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Password -->
+    <section class="profile-section">
+      <h2>Change Password</h2>
+      <div class="password-group">
+        <label>Old Password</label>
+        <div class="password-input">
+          <input type="password" id="oldPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('oldPassword')">Show</button>
+        </div>
+      </div>
+
+      <div class="password-group">
+        <label>New Password</label>
+        <div class="password-input">
+          <input type="password" id="newPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('newPassword')">Show</button>
+        </div>
+      </div>
+
+      <div class="password-group">
+        <label>Confirm Password</label>
+        <div class="password-input">
+          <input type="password" id="confirmPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('confirmPassword')">Show</button>
+        </div>
+      </div>
+
+      <button class="btn update-btn" id="updatePasswordBtn">Update Password</button>
+      <div class="spinner" id="passwordSpinner"></div>
+    </section>
+
+    <!-- Back Button -->
+    <a href="profile.html" class="back-btn">← Back to Profile</a>
+  </div>
+
+  <script>
+    // Global variables
+    let currentUser = null;
+    let userData = null;
+
+    // DOM Elements
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const logoutLink = document.getElementById('logoutLink');
+    
+    // Profile elements
+    const sidebarProfilePic = document.getElementById('sidebarProfilePic');
+    const sidebarFullName = document.getElementById('sidebarFullName');
+    const sidebarUsername = document.getElementById('sidebarUsername');
+    
+    // Form elements
+    const fullNameInput = document.getElementById('fullName');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    
+    // Button elements
+    const editFullNameBtn = document.getElementById('editFullName');
+    const saveFullNameBtn = document.getElementById('saveFullName');
+    const cancelFullNameBtn = document.getElementById('cancelFullName');
+    
+    const editEmailBtn = document.getElementById('editEmail');
+    const saveEmailBtn = document.getElementById('saveEmail');
+    const cancelEmailBtn = document.getElementById('cancelEmail');
+    
+    const editPhoneBtn = document.getElementById('editPhone');
+    const savePhoneBtn = document.getElementById('savePhone');
+    const cancelPhoneBtn = document.getElementById('cancelPhone');
+    
+    const updatePasswordBtn = document.getElementById('updatePasswordBtn');
+    
+    // Spinners
+    const passwordSpinner = document.getElementById('passwordSpinner');
+
+    // Show/hide messages
+    function showMessage(message, isSuccess = true) {
+      if (isSuccess) {
+        successMessage.textContent = message;
+        successMessage.style.display = 'block';
+        errorMessage.style.display = 'none';
+      } else {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+      }
+      
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+      }, 5000);
+    }
+
+    // Toggle password visibility
+    function toggleVisibility(id) {
+      const input = document.getElementById(id);
+      const btn = input.nextElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "Hide";
+      } else {
+        input.type = "password";
+        btn.textContent = "Show";
+      }
+    }
+
+    // Toggle edit mode for fields
+    function toggleEditMode(field, enable) {
+      const input = document.getElementById(field);
+      const editBtn = document.getElementById(`edit${field.charAt(0).toUpperCase() + field.slice(1)}`);
+      const saveBtn = document.getElementById(`save${field.charAt(0).toUpperCase() + field.slice(1)}`);
+      const cancelBtn = document.getElementById(`cancel${field.charAt(0).toUpperCase() + field.slice(1)}`);
+      
+      if (enable) {
+        input.disabled = false;
+        input.focus();
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+      } else {
+        input.disabled = true;
+        editBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        
+        // Reset to original value
+        if (field === 'fullName') input.value = userData.fullName || '';
+        if (field === 'email') input.value = userData.email || '';
+        if (field === 'phone') input.value = userData.contactNumber || '';
+      }
+    }
+
+    // Check if user is logged in
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        console.log('User logged in:', user.email);
+        
+        // Load user data from Firestore
+        loadUserData(user.uid);
+      } else {
+        // Redirect to login if not authenticated
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Load user data from Firestore
+    async function loadUserData(userId) {
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          userData = userDoc.data();
+          
+          // Update form fields
+          fullNameInput.value = userData.fullName || '';
+          emailInput.value = userData.email || currentUser.email || '';
+          phoneInput.value = userData.contactNumber || '';
+          
+          // Update sidebar
+          sidebarFullName.textContent = userData.fullName || currentUser.displayName || 'User';
+          sidebarUsername.textContent = userData.fullName ? userData.fullName.split(' ')[0] : (currentUser.displayName || currentUser.email.split('@')[0]);
+          
+          // Update profile picture if available
+          if (userData.profilePicture) {
+            sidebarProfilePic.src = userData.profilePicture;
+          }
+        } else {
+          console.log('No user data found in Firestore');
+          // Use auth data as fallback
+          fullNameInput.value = currentUser.displayName || '';
+          emailInput.value = currentUser.email || '';
+          phoneInput.value = '';
+          
+          sidebarFullName.textContent = currentUser.displayName || 'User';
+          sidebarUsername.textContent = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0];
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        showMessage('Failed to load user data. Please try again.', false);
+      }
+    }
+
+    // Update user data in Firestore
+    async function updateUserData(field, value) {
+      try {
+        await db.collection('users').doc(currentUser.uid).set({
+          [field]: value,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        // Update local userData
+        userData[field] = value;
+        
+        // Update UI
+        if (field === 'fullName') {
+          sidebarFullName.textContent = value;
+          sidebarUsername.textContent = value.split(' ')[0];
+        }
+        
+        return true;
+      } catch (error) {
+        console.error(`Error updating ${field}:`, error);
+        return false;
+      }
+    }
+
+    // Update email in Firebase Auth
+    async function updateEmail(newEmail) {
+      try {
+        await currentUser.updateEmail(newEmail);
+        
+        // Also update in Firestore
+        await updateUserData('email', newEmail);
+        
+        return true;
+      } catch (error) {
+        console.error('Error updating email:', error);
+        
+        // Handle specific errors
+        if (error.code === 'auth/requires-recent-login') {
+          showMessage('For security, please log in again to change your email.', false);
+        } else {
+          showMessage('Failed to update email. Please try again.', false);
+        }
+        
+        return false;
+      }
+    }
+
+    // Update password in Firebase Auth
+    async function updatePassword(newPassword) {
+      try {
+        await currentUser.updatePassword(newPassword);
+        return true;
+      } catch (error) {
+        console.error('Error updating password:', error);
+        
+        // Handle specific errors
+        if (error.code === 'auth/requires-recent-login') {
+          showMessage('For security, please log in again to change your password.', false);
+        } else {
+          showMessage('Failed to update password. Please try again.', false);
+        }
+        
+        return false;
+      }
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      // Full Name Edit/Save/Cancel
+      editFullNameBtn.addEventListener('click', () => toggleEditMode('fullName', true));
+      saveFullNameBtn.addEventListener('click', async () => {
+        const newFullName = fullNameInput.value.trim();
+        if (!newFullName) {
+          showMessage('Full name cannot be empty.', false);
+          return;
+        }
+        
+        const success = await updateUserData('fullName', newFullName);
+        if (success) {
+          showMessage('Full name updated successfully!');
+          toggleEditMode('fullName', false);
+        } else {
+          showMessage('Failed to update full name. Please try again.', false);
+        }
+      });
+      cancelFullNameBtn.addEventListener('click', () => toggleEditMode('fullName', false));
+      
+      // Email Edit/Save/Cancel
+      editEmailBtn.addEventListener('click', () => toggleEditMode('email', true));
+      saveEmailBtn.addEventListener('click', async () => {
+        const newEmail = emailInput.value.trim();
+        if (!newEmail) {
+          showMessage('Email cannot be empty.', false);
+          return;
+        }
+        
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+          showMessage('Please enter a valid email address.', false);
+          return;
+        }
+        
+        const success = await updateEmail(newEmail);
+        if (success) {
+          showMessage('Email updated successfully!');
+          toggleEditMode('email', false);
+        }
+      });
+      cancelEmailBtn.addEventListener('click', () => toggleEditMode('email', false));
+      
+      // Phone Edit/Save/Cancel
+      editPhoneBtn.addEventListener('click', () => toggleEditMode('phone', true));
+      savePhoneBtn.addEventListener('click', async () => {
+        const newPhone = phoneInput.value.trim();
+        if (!newPhone) {
+          showMessage('Phone number cannot be empty.', false);
+          return;
+        }
+        
+        // Phone validation (Philippine format)
+        const phoneRegex = /^09\d{9}$/;
+        const cleanPhone = newPhone.replace(/\D/g, '');
+        
+        if (!phoneRegex.test(cleanPhone)) {
+          showMessage('Please enter a valid Philippine phone number (09XXXXXXXXX).', false);
+          return;
+        }
+        
+        const success = await updateUserData('contactNumber', cleanPhone);
+        if (success) {
+          showMessage('Phone number updated successfully!');
+          toggleEditMode('phone', false);
+        } else {
+          showMessage('Failed to update phone number. Please try again.', false);
+        }
+      });
+      cancelPhoneBtn.addEventListener('click', () => toggleEditMode('phone', false));
+      
+      // Update Password
+      updatePasswordBtn.addEventListener('click', async () => {
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        // Validation
+        if (!oldPassword || !newPassword || !confirmPassword) {
+          showMessage('Please fill in all password fields.', false);
+          return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+          showMessage('New passwords do not match.', false);
+          return;
+        }
+        
+        if (newPassword.length < 6) {
+          showMessage('Password must be at least 6 characters long.', false);
+          return;
+        }
+        
+        // Show loading spinner
+        passwordSpinner.style.display = 'inline-block';
+        updatePasswordBtn.disabled = true;
+        
+        try {
+          // Reauthenticate user
+          const credential = firebase.auth.EmailAuthProvider.credential(
+            currentUser.email, 
+            oldPassword
+          );
+          
+          await currentUser.reauthenticateWithCredential(credential);
+          
+          // Update password
+          const success = await updatePassword(newPassword);
+          
+          if (success) {
+            showMessage('Password updated successfully!');
+            // Clear password fields
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+          }
+        } catch (error) {
+          console.error('Error reauthenticating:', error);
+          if (error.code === 'auth/wrong-password') {
+            showMessage('Current password is incorrect.', false);
+          } else {
+            showMessage('Failed to update password. Please try again.', false);
+          }
+        } finally {
+          passwordSpinner.style.display = 'none';
+          updatePasswordBtn.disabled = false;
+        }
+      });
+      
+      // Logout
+      logoutLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('Are you sure you want to logout?')) {
+          auth.signOut().then(() => {
+            window.location.href = 'login.html';
+          }).catch((error) => {
+            console.error('Logout error:', error);
+            showMessage('Failed to logout. Please try again.', false);
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

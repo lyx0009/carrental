@@ -1,0 +1,185 @@
+/* Login-specific styles */
+.form-card {
+    animation: slideIn 0.5s ease-in-out;
+    background: #f0f0f0; /* --grey */
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    border: 1px solid #d0d0d0;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Compact form styles */
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    color: #111 !important; /* --black */
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+    font-size: 14px;
+}
+
+.remember-forgot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.75rem 0;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    color: #111 !important; /* --black */
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.remember-me input {
+    margin-right: 6px;
+    width: auto;
+    accent-color: #4da6ff; /* --blue */
+}
+
+.forgot-password {
+    color: #4da6ff; /* --blue */
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+    color: #005b96; /* --dark-blue */
+    text-decoration: underline;
+}
+
+/* Input fields styling */
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    margin: 6px 0;
+    background: #fff; /* --white */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    color: #111; /* --black */
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus {
+    outline: none;
+    border-color: #4da6ff; /* --blue */
+    box-shadow: 0 0 0 2px rgba(77, 166, 255, 0.2);
+}
+
+input[type="email"]::placeholder,
+input[type="password"]::placeholder {
+    color: #888;
+}
+
+/* Button styling */
+.login-btn {
+    width: 100%;
+    padding: 10px;
+    background: #4da6ff; /* --blue */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 0.75rem 0;
+}
+
+.login-btn:hover {
+    background: #005b96; /* --dark-blue */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.3);
+}
+
+/* Admin Section Styles */
+.admin-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #ccc;
+}
+
+.divider {
+    text-align: center;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.divider::before {
+    display: none;
+}
+
+.divider span {
+    background: transparent;
+    color: #111; /* --black */
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+}
+
+.admin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff; /* --white */
+    color: #111; /* --black */
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.admin-btn:hover {
+    background: #f0f0f0; /* --grey */
+    border-color: #4da6ff; /* --blue */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.admin-icon {
+    font-size: 16px;
+}
+
+/* Additional text styling */
+.register-link {
+    text-align: center;
+    margin-top: 1rem;
+    color: #666;
+    font-size: 14px;
+}
+
+.register-link a {
+    color: #4da6ff; /* --blue */
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.register-link a:hover {
+    color: #005b96; /* --dark-blue */
+    text-decoration: underline;
+}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarRental - Admin Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <link rel="stylesheet" href="admin.css">
+    
+    <!-- Add Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+            authDomain: "carrental-4bdd4.firebaseapp.com",
+            projectId: "carrental-4bdd4",
+            storageBucket: "carrental-4bdd4.firebasestorage.app",
+            messagingSenderId: "318648301485",
+            appId: "1:318648301485:web:bc543198901a732b701324",
+            measurementId: "G-1C2E4MXEDK"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Check if user is already logged in and is admin
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    // Check if user has admin role
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().role === "admin") {
+                        // Only redirect if user is actually an admin
+                        window.location.href = "adminpanel.html";
+                    } else {
+                        // If user is logged in but not admin, sign them out
+                        await signOut(auth);
+                        console.log("Non-admin user signed out from admin portal");
+                    }
+                } catch (error) {
+                    console.error("Error checking user role:", error);
+                    // If there's an error checking role, sign out for security
+                    await signOut(auth);
+                }
+            }
+        });
+
+        document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('admin-email').value.trim();
+            const password = document.getElementById('admin-password').value.trim();
+            const loginBtn = document.querySelector('.btn.adminpanel');
+            const originalBtnText = loginBtn.textContent;
+
+            try {
+                // Show loading state
+                loginBtn.textContent = "Signing in...";
+                loginBtn.disabled = true;
+
+                // Sign in with Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // Check user role in Firestore
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    
+                    if (userData.role === "admin") {
+                        // Redirect to admin panel
+                        window.location.href = "adminpanel.html";
+                    } else {
+                        // Sign out non-admin users immediately
+                        await signOut(auth);
+                        throw new Error("You don't have administrator privileges.");
+                    }
+                } else {
+                    await signOut(auth);
+                    throw new Error("User data not found.");
+                }
+                
+            } catch (error) {
+                console.error("Login error:", error);
+                
+                let errorMessage = "Login failed. Please check your credentials.";
+                if (error.code === 'auth/invalid-email') {
+                    errorMessage = "Invalid email address.";
+                } else if (error.code === 'auth/user-not-found') {
+                    errorMessage = "No account found with this email.";
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = "Incorrect password.";
+                } else if (error.message.includes('administrator')) {
+                    errorMessage = error.message;
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "Too many failed attempts. Please try again later.";
+                }
+                
+                alert(errorMessage);
+            } finally {
+                // Reset button state
+                loginBtn.textContent = originalBtnText;
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Additional security: Clear any existing sessions on page load
+        window.addEventListener('load', async () => {
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (!userDoc.exists() || userDoc.data().role !== "admin") {
+                        await signOut(auth);
+                    }
+                } catch (error) {
+                    console.error("Security check error:", error);
+                    await signOut(auth);
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel admin-panel">
+            <div class="admin-overlay">
+                <h1>Admin Portal</h1>
+                <p>Manage your car rental business efficiently</p>
+                <div class="admin-features">
+                    <div class="feature">
+                        <span class="feature-icon">🚗</span>
+                        <span>Vehicle Management</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📊</span>
+                        <span>Analytics & Reports</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">👥</span>
+                        <span>Customer Management</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💰</span>
+                        <span>Revenue Tracking</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="right-panel">
+            <div class="form-card admin-card">
+                <div class="logo admin-logo">
+                    <span>CarRental</span>
+                    <span class="admin-badge">Admin</span>
+                </div>
+                <h2 class="form-title">Admin Access</h2>
+                <p class="admin-subtitle">Restricted area - authorized personnel only</p>
+                
+                <form id="admin-login-form">
+                    <div class="form-group">
+                        <label for="admin-email">Admin Email</label>
+                        <input type="email" id="admin-email" placeholder="admin@carrental.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">Admin Password</label>
+                        <input type="password" id="admin-password" placeholder="Enter admin password" required>
+                    </div>
+                    <button type="submit" class="btn adminpanel">Access Admin Panel</button>
+                </form>
+                
+                <div class="form-footer admin-footer">
+                    <a href="login.html" class="back-to-user">← Back to User Login</a>
+                    <div class="emergency-contact">
+                        <p>System Issues? <a href="#">Contact Support</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

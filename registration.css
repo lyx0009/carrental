@@ -1,0 +1,95 @@
+/* Registration-specific styles */
+.form-card {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.password-strength {
+    margin-top: 5px;
+    font-size: 14px;
+    display: none;
+}
+
+.weak {
+    color: #ff4d4d;
+}
+
+.medium {
+    color: #ffa64d;
+}
+
+.strong {
+    color: #4dff4d;
+}
+
+/* Admin Section Styles */
+.admin-section {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.divider {
+    text-align: center;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+.divider span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0 15px;
+    position: relative;
+    z-index: 2;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 107, 107, 0.1);
+    color: #ff6b6b;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.admin-btn:hover {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+}
+
+.admin-icon {
+    font-size: 18px;
+}

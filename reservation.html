@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarRental | Reservation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Styles - Updated to White */
+        .sidebar {
+            width: 260px;
+            background: white;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+        
+        .logo {
+            padding: 25px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo h2 {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2c3e50;
+        }
+        
+        .logo i {
+            font-size: 1.6rem;
+            color: #3498db;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .sidebar-nav ul {
+            list-style: none;
+        }
+        
+        .sidebar-nav li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            color: #555;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-nav a:hover, .sidebar-nav li.active a {
+            background: #f0f8ff;
+            color: #3498db;
+            border-left: 4px solid #3498db;
+        }
+        
+        .sidebar-nav a i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .user-avatar i {
+            font-size: 2.5rem;
+            color: #3498db;
+        }
+        
+        .user-details h4 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .user-details p {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            color: #333;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #e9ecef;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Updated Top Navigation - Removed user profile and notification */
+        .top-nav {
+            background: white;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            height: 80px;
+        }
+        
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #555;
+            cursor: pointer;
+            display: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .top-nav h1 {
+            font-size: 1.6rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        
+        /* Content Area Styles */
+        .content-area {
+            flex: 1;
+            padding: 25px;
+            background: #f5f7fa;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        /* Reservation Container */
+        .reservation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .reservation-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+        }
+        
+        .reservation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .reservation-car-info {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .car-image-small {
+            width: 100px;
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 2rem;
+            overflow: hidden;
+        }
+        
+        .car-image-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .reservation-details h4 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .reservation-details p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .rental-dates {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .date-item {
+            margin-bottom: 10px;
+        }
+        
+        .date-item label {
+            display: block;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        .date-item p {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .price-summary {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .price-item.total {
+            border-top: 1px solid #eee;
+            padding-top: 8px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .reservation-cost {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+            padding-left: 20px;
+            border-left: 1px solid #eee;
+            min-width: 200px;
+        }
+        
+        .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .confirm-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+        
+        .confirm-btn:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1c6ea4 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(41, 128, 185, 0.4);
+        }
+        
+        .confirm-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .rental-info-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+        }
+        
+        .rental-info-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+        }
+        
+        .detail-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 0.95rem;
+        }
+        
+        .detail-item p {
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        .features-list {
+            list-style: none;
+        }
+        
+        .features-list li {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .features-list li i {
+            color: #2ecc71;
+            font-size: 0.9rem;
+        }
+        
+        /* Payment Modal Styles */
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .payment-modal.active {
+            display: flex;
+        }
+        
+        .payment-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .payment-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .payment-header h3 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .close-payment {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .payment-body {
+            padding: 25px;
+        }
+        
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .payment-option {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .payment-option.selected {
+            border-color: #3498db;
+            background: #f0f8ff;
+        }
+        
+        .payment-option i {
+            font-size: 1.5rem;
+            color: #3498db;
+        }
+        
+        .option-details h4 {
+            margin-bottom: 5px;
+        }
+        
+        .option-details p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .gcash-details {
+            display: none;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .gcash-details.active {
+            display: block;
+        }
+        
+        .gcash-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            letter-spacing: 1px;
+        }
+        
+        .gcash-qr {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+        
+        .gcash-qr img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .payment-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        /* Success Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #2ecc71;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 3000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .toast.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast i {
+            font-size: 1.2rem;
+        }
+        
+        /* Reservation Status Styles */
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background: #d1edff;
+            color: #004085;
+        }
+        
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                height: 100%;
+                z-index: 100;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .reservation-item {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .reservation-cost {
+                align-items: flex-start;
+                width: 100%;
+                border-left: none;
+                padding-left: 0;
+                border-top: 1px solid #eee;
+                padding-top: 20px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .content-area {
+                padding: 15px;
+            }
+            
+            .payment-actions {
+                flex-direction: column;
+            }
+            
+            .gcash-qr {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .rental-dates {
+                grid-template-columns: 1fr;
+            }
+            
+            .reservation-car-info {
+                flex-direction: column;
+            }
+            
+            .car-image-small {
+                width: 100%;
+                height: 120px;
+            }
+            
+            .top-nav {
+                padding: 15px 20px;
+                height: 70px;
+            }
+            
+            .top-nav h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar - Updated to White -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2><i class="fas fa-car"></i> CarRental</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="userdashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="browsecars.html"><i class="fas fa-car-side"></i> Browse Cars</a></li>
+                    <li><a href="rentalhistory.html"><i class="fas fa-history"></i> Rental History</a></li>
+                    <li class="active"><a href="reservation.html"><i class="fas fa-calendar-check"></i> Reservation</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation - Updated to Match Rental History -->
+            <header class="top-nav">
+                <div class="nav-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1>Reservation</h1>
+                </div>
+                <!-- Removed the nav-right section containing notification and user profile -->
+            </header>
+
+            <!-- Reservation Content -->
+            <div class="content-area">
+                <div class="section-header">
+                    <h2>Reservation Details</h2>
+                </div>
+
+                <div class="reservation-container">
+                    <!-- Loading Spinner -->
+                    <div class="loading-spinner" id="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+
+                    <!-- Reservation Card -->
+                    <div class="reservation-card" id="reservation-content" style="display: none;">
+                        <div class="status-badge status-approved" id="status-badge">
+                            <i class="fas fa-check-circle"></i> Approved by Admin
+                        </div>
+                        <div class="reservation-item">
+                            <div class="reservation-car-info">
+                                <div class="car-image-small" id="car-image-container">
+                                    <i class="fas fa-car"></i>
+                                </div>
+                                <div class="reservation-details">
+                                    <h4 id="car-model">Toyota Innova</h4>
+                                    <p id="car-details">7 Seaters • Automatic • MPV</p>
+                                    
+                                    <div class="rental-dates">
+                                        <div class="date-item">
+                                            <label>Pick-up Date & Time</label>
+                                            <p id="pickup-date">Dec 15, 2023 at 10:00 AM</p>
+                                        </div>
+                                        <div class="date-item">
+                                            <label>Return Date & Time</label>
+                                            <p id="return-date">Dec 18, 2023 at 10:00 AM</p>
+                                        </div>
+                                        <div class="date-item">
+                                            <label>Rental Duration</label>
+                                            <p id="rental-duration">3 days</p>
+                                        </div>
+                                        <div class="date-item">
+                                            <label>Pick-up & Return Location</label>
+                                            <p id="location">TJS, Matungao, Bulakan, Bulacan - 3017, Philippines</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="price-summary">
+                                        <div class="price-item">
+                                            <span id="rental-fee-label">Rental Fee (3 days × ₱3,500)</span>
+                                            <span id="rental-fee">₱10,500</span>
+                                        </div>
+                                        <div class="price-item total">
+                                            <span>Total Amount</span>
+                                            <span id="total-amount">₱10,500</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="reservation-cost">
+                                <span class="amount" id="total-amount-display">₱10,500</span>
+                                <button class="confirm-btn" id="confirm-payment-btn">
+                                    <i class="fas fa-credit-card"></i> Confirm & Pay Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rental Information Card -->
+                    <div class="rental-info-card" id="rental-info" style="display: none;">
+                        <h3>Rental Information</h3>
+                        <div class="info-grid">
+                            <div>
+                                <div class="detail-item">
+                                    <label>Pick-up Location</label>
+                                    <p id="pickup-location">TJS, Matungao, Bulakan, Bulacan - 3017, Philippines</p>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Return Location</label>
+                                    <p id="return-location">TJS, Matungao, Bulakan, Bulacan - 3017, Philippines</p>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Contact Information</label>
+                                    <p id="contact-info">John Doe<br>+63 912 345 6789<br>john.doe@example.com</p>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="detail-item">
+                                    <label>Included Features</label>
+                                    <ul class="features-list">
+                                        <li><i class="fas fa-check"></i> Unlimited Mileage</li>
+                                        <li><i class="fas fa-check"></i> 24/7 Roadside Assistance</li>
+                                        <li><i class="fas fa-check"></i> Collision Damage Waiver</li>
+                                        <li><i class="fas fa-check"></i> Theft Protection</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Requirements</label>
+                                    <p>Valid driver's license and proof of insurance required at pickup.</p>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Reservation ID</label>
+                                    <p id="reservation-id">CR-2023-00125</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Reservations Message -->
+                    <div class="reservation-card" id="no-reservations" style="display: none;">
+                        <div style="text-align: center; padding: 40px;">
+                            <i class="fas fa-calendar-times" style="font-size: 3rem; color: #ddd; margin-bottom: 20px;"></i>
+                            <h3>No Approved Reservations</h3>
+                            <p>You don't have any approved reservations yet.</p>
+                            <a href="browsecars.html" class="confirm-btn" style="display: inline-block; margin-top: 20px;">
+                                <i class="fas fa-car"></i> Browse Cars
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="payment-modal" id="payment-modal">
+        <div class="payment-content">
+            <div class="payment-header">
+                <h3>Complete Payment</h3>
+                <button class="close-payment" id="close-payment">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="payment-body">
+                <div class="payment-options">
+                    <div class="payment-option selected" data-option="gcash">
+                        <i class="fas fa-mobile-alt"></i>
+                        <div class="option-details">
+                            <h4>Pay with GCash</h4>
+                            <p>Pay instantly using GCash mobile app</p>
+                        </div>
+                    </div>
+                    <div class="payment-option" data-option="onhand">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <div class="option-details">
+                            <h4>Pay on Hand</h4>
+                            <p>Pay in person when you pick up the car</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="gcash-details active" id="gcash-details">
+                    <h4>Send payment to this GCash number:</h4>
+                    <div class="gcash-number">0976 423 3488</div>
+                    <p>Or scan this QR code with your GCash app:</p>
+                    <div class="gcash-qr">
+                        <!-- Using your actual GCash QR code image -->
+                        <img src="gcashqr.png" alt="GCash QR Code">
+                    </div>
+                    <p><strong>Total Amount: <span id="modal-total-amount">₱10,500</span></strong></p>
+                    <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                        After sending payment, please click the "Confirm Payment" button below.
+                    </p>
+                </div>
+                
+                <div class="payment-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-payment">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-payment">Confirm Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Toast -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toast-message">Payment successful! Reservation confirmed.</span>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+            authDomain: "carrental-4bdd4.firebaseapp.com",
+            projectId: "carrental-4bdd4",
+            storageBucket: "carrental-4bdd4.firebasestorage.app",
+            messagingSenderId: "318648301485",
+            appId: "1:318648301485:web:bc543198901a732b701324",
+            measurementId: "G-1C2E4MXEDK"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            const paymentModal = document.getElementById('payment-modal');
+            const closePayment = document.getElementById('close-payment');
+            const cancelPayment = document.getElementById('cancel-payment');
+            const confirmPayment = document.getElementById('confirm-payment');
+            const paymentOptions = document.querySelectorAll('.payment-option');
+            const gcashDetails = document.getElementById('gcash-details');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const reservationContent = document.getElementById('reservation-content');
+            const rentalInfo = document.getElementById('rental-info');
+            const noReservations = document.getElementById('no-reservations');
+            const statusBadge = document.getElementById('status-badge');
+            const modalTotalAmount = document.getElementById('modal-total-amount');
+            const totalAmountDisplay = document.getElementById('total-amount-display');
+            const totalAmount = document.getElementById('total-amount');
+            const rentalFee = document.getElementById('rental-fee');
+            const rentalFeeLabel = document.getElementById('rental-fee-label');
+            const carImageContainer = document.getElementById('car-image-container');
+            
+            let selectedPaymentMethod = 'gcash';
+            let currentReservationId = null;
+            let currentReservationData = null;
+            let carPrice = 1400; // Default price, will be updated with actual car price
+            
+            // Toggle sidebar
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+            }
+
+            // Wait for Firebase auth to initialize
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    // User is signed in
+                    console.log('User authenticated:', user.uid, user.email);
+                    loadReservationData(user.uid, user.email);
+                } else {
+                    // No user is signed in, redirect to login
+                    console.log('No user signed in, redirecting to login');
+                    window.location.href = 'login.html';
+                }
+            });
+            
+            // Payment modal functionality
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function() {
+                    paymentModal.classList.add('active');
+                });
+            }
+            
+            // Close payment modal
+            if (closePayment) {
+                closePayment.addEventListener('click', closePaymentModal);
+            }
+            
+            if (cancelPayment) {
+                cancelPayment.addEventListener('click', closePaymentModal);
+            }
+            
+            // Close modal when clicking outside
+            paymentModal.addEventListener('click', function(e) {
+                if (e.target === paymentModal) {
+                    closePaymentModal();
+                }
+            });
+            
+            function closePaymentModal() {
+                paymentModal.classList.remove('active');
+            }
+            
+            // Handle payment option selection
+            paymentOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove selected class from all options
+                    paymentOptions.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+                    
+                    // Update selected payment method
+                    selectedPaymentMethod = this.getAttribute('data-option');
+                    
+                    // Show/hide GCash details based on selection
+                    if (selectedPaymentMethod === 'gcash') {
+                        gcashDetails.classList.add('active');
+                        confirmPayment.textContent = 'Confirm Payment';
+                    } else {
+                        gcashDetails.classList.remove('active');
+                        confirmPayment.textContent = 'Confirm Reservation';
+                    }
+                });
+            });
+            
+            // Handle payment confirmation
+            if (confirmPayment) {
+                confirmPayment.addEventListener('click', function() {
+                    if (selectedPaymentMethod === 'gcash') {
+                        // For GCash payment, we assume the user has made the payment
+                        processPayment('GCash payment received. Reservation confirmed!');
+                    } else {
+                        // For pay on hand, just confirm the reservation
+                        processPayment('Reservation confirmed! Please pay when you pick up the car.');
+                    }
+                });
+            }
+            
+            function processPayment(message) {
+                // Show loading state
+                const originalText = confirmPayment.textContent;
+                confirmPayment.textContent = 'Processing...';
+                confirmPayment.disabled = true;
+                
+                // Get current user
+                const user = auth.currentUser;
+                if (!user) {
+                    alert('Please log in to complete payment');
+                    return;
+                }
+                
+                // Update reservation status in Firebase
+                updateReservationStatus(user.uid, selectedPaymentMethod)
+                    .then(() => {
+                        // Show success message
+                        toastMessage.textContent = message;
+                        toast.classList.add('active');
+                        
+                        // Close payment modal
+                        closePaymentModal();
+                        
+                        // Reset button
+                        confirmPayment.textContent = originalText;
+                        confirmPayment.disabled = false;
+                        
+                        // Update UI to show paid status
+                        updateUIAfterPayment();
+                        
+                        // Add to rental history
+                        addToRentalHistory(user.uid);
+                        
+                        // Redirect to dashboard after delay
+                        setTimeout(function() {
+                            window.location.href = 'userdashboard.html';
+                        }, 3000);
+                    })
+                    .catch(error => {
+                        console.error('Error updating reservation:', error);
+                        alert('Error processing payment. Please try again.');
+                        confirmPayment.textContent = originalText;
+                        confirmPayment.disabled = false;
+                    });
+            }
+            
+            function updateReservationStatus(userId, paymentMethod) {
+                if (!currentReservationId) {
+                    return Promise.reject('No reservation ID found');
+                }
+                
+                return db.collection('reservations').doc(currentReservationId).update({
+                    paymentStatus: 'paid',
+                    paymentMethod: paymentMethod,
+                    paidAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'confirmed'
+                });
+            }
+            
+            function updateUIAfterPayment() {
+                // Update status badge
+                statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Payment Confirmed';
+                statusBadge.className = 'status-badge status-paid';
+                
+                // Disable payment button
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Payment Completed';
+            }
+            
+            function addToRentalHistory(userId) {
+                if (!currentReservationData) return;
+                
+                const rentalHistoryData = {
+                    reservationId: currentReservationId,
+                    carName: currentReservationData.carName || currentReservationData.car || 'Toyota Innova',
+                    carDetails: `${currentReservationData.seater || '7'} Seaters • ${currentReservationData.transmission || 'Automatic'} • ${currentReservationData.type || 'MPV'}`,
+                    pickupDate: currentReservationData.startDate || new Date(),
+                    returnDate: currentReservationData.endDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                    totalAmount: currentReservationData.totalPrice || calculateAccurateTotal(currentReservationData),
+                    paymentMethod: selectedPaymentMethod,
+                    status: 'completed',
+                    userId: userId,
+                    location: 'TJS, Matungao, Bulakan, Bulacan - 3017, Philippines',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                return db.collection('rentalHistory').add(rentalHistoryData);
+            }
+            
+            function calculateAccurateTotal(reservation) {
+                // Calculate accurate rental fee based on days and daily rate
+                let pickupDate, returnDate;
+                
+                if (reservation.startDate && reservation.startDate.toDate) {
+                    pickupDate = reservation.startDate.toDate();
+                } else if (reservation.startDate) {
+                    pickupDate = new Date(reservation.startDate);
+                } else {
+                    pickupDate = new Date();
+                    pickupDate.setDate(pickupDate.getDate() + 1);
+                }
+                
+                if (reservation.endDate && reservation.endDate.toDate) {
+                    returnDate = reservation.endDate.toDate();
+                } else if (reservation.endDate) {
+                    returnDate = new Date(reservation.endDate);
+                } else {
+                    returnDate = new Date(pickupDate);
+                    returnDate.setDate(returnDate.getDate() + 3);
+                }
+                
+                const duration = Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24));
+                const dailyRate = reservation.dailyRate || reservation.carPrice || carPrice;
+                
+                return duration * dailyRate;
+            }
+            
+            // Function to load reservation data from Firebase
+            function loadReservationData(userId, userEmail) {
+                console.log('Loading reservations for user:', userId, userEmail);
+                
+                // Get reservation ID from URL parameters or use the latest approved reservation
+                const urlParams = new URLSearchParams(window.location.search);
+                const reservationId = urlParams.get('id');
+                
+                if (reservationId) {
+                    // Load specific reservation
+                    db.collection('reservations').doc(reservationId).get()
+                        .then(doc => {
+                            if (doc.exists) {
+                                const reservation = doc.data();
+                                reservation.id = doc.id;
+                                console.log('Specific reservation found:', reservation);
+                                currentReservationId = doc.id;
+                                currentReservationData = reservation;
+                                
+                                // Load car data including price and image
+                                loadCarData(reservation.carId || reservation.carName, reservation);
+                                
+                            } else {
+                                // If no specific reservation, load the latest approved one
+                                loadLatestApprovedReservation(userId, userEmail);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading reservation:', error);
+                            loadLatestApprovedReservation(userId, userEmail);
+                        });
+                } else {
+                    // Load the latest approved reservation for the user
+                    loadLatestApprovedReservation(userId, userEmail);
+                }
+            }
+            
+            // NEW FUNCTION: Load car data including price and image
+            function loadCarData(carId, reservation) {
+                if (!carId) {
+                    console.log('No car ID found in reservation, using default data');
+                    populateReservationDetails(reservation);
+                    return;
+                }
+                
+                console.log('Loading car data for car ID:', carId);
+                
+                // First try to find the car by ID
+                db.collection('cars').doc(carId).get()
+                    .then(carDoc => {
+                        if (carDoc.exists) {
+                            const carData = carDoc.data();
+                            console.log('Car data found:', carData);
+                            
+                            // Get the actual car price
+                            carPrice = carData.price || carData.dailyRate || 1400;
+                            console.log('Car price set to:', carPrice);
+                            
+                            // Check for image in various possible fields
+                            const carImage = carData.imageBase64 || carData.mainImage || carData.imageUrl;
+                            
+                            if (carImage) {
+                                console.log('Car image found, updating UI');
+                                // Replace the icon with the actual car image
+                                carImageContainer.innerHTML = `<img src="${carImage}" alt="${carData.name || carData.model}" style="width:100%;height:100%;object-fit:cover;">`;
+                            } else {
+                                console.log('No car image found for this car');
+                            }
+                            
+                            // Update reservation details with actual car price
+                            populateReservationDetails(reservation);
+                            
+                        } else {
+                            // If car not found by ID, try to find by name
+                            console.log('Car not found by ID, trying to find by name');
+                            findCarByName(carId, reservation);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading car data:', error);
+                        // Try to find by name if direct ID lookup fails
+                        findCarByName(carId, reservation);
+                    });
+            }
+            
+            // NEW FUNCTION: Find car by name if ID lookup fails
+            function findCarByName(carName, reservation) {
+                if (!carName) {
+                    populateReservationDetails(reservation);
+                    return;
+                }
+                
+                console.log('Searching for car by name:', carName);
+                
+                db.collection('cars')
+                    .where('name', '==', carName)
+                    .limit(1)
+                    .get()
+                    .then(snapshot => {
+                        if (!snapshot.empty) {
+                            const carDoc = snapshot.docs[0];
+                            const carData = carDoc.data();
+                            console.log('Car found by name:', carData);
+                            
+                            // Get the actual car price
+                            carPrice = carData.price || carData.dailyRate || 1400;
+                            console.log('Car price set to:', carPrice);
+                            
+                            const carImage = carData.imageBase64 || carData.mainImage || carData.imageUrl;
+                            
+                            if (carImage) {
+                                console.log('Car image found by name, updating UI');
+                                carImageContainer.innerHTML = `<img src="${carImage}" alt="${carData.name || carData.model}" style="width:100%;height:100%;object-fit:cover;">`;
+                            }
+                            
+                            // Update reservation details with actual car price
+                            populateReservationDetails(reservation);
+                        } else {
+                            console.log('Car not found by name either, using default price');
+                            populateReservationDetails(reservation);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error searching car by name:', error);
+                        populateReservationDetails(reservation);
+                    });
+            }
+            
+            function loadLatestApprovedReservation(userId, userEmail) {
+                console.log('Loading latest approved reservation for user:', userId);
+                
+                // Try multiple queries to find reservations
+                const queries = [
+                    // Query by userId and adminStatus
+                    db.collection('reservations')
+                        .where('userId', '==', userId)
+                        .where('adminStatus', '==', 'approved')
+                        .orderBy('createdAt', 'desc')
+                        .limit(1)
+                        .get(),
+                    
+                    // Query by userEmail and adminStatus (in case userId doesn't match)
+                    db.collection('reservations')
+                        .where('userEmail', '==', userEmail)
+                        .where('adminStatus', '==', 'approved')
+                        .orderBy('createdAt', 'desc')
+                        .limit(1)
+                        .get(),
+                    
+                    // Query by status only (fallback)
+                    db.collection('reservations')
+                        .where('status', '==', 'approved')
+                        .orderBy('createdAt', 'desc')
+                        .limit(1)
+                        .get()
+                ];
+                
+                // Try all queries
+                Promise.all(queries.map(query => query.catch(e => {
+                    console.log('Query failed:', e);
+                    return { empty: true };
+                })))
+                .then(results => {
+                    console.log('Query results:', results);
+                    
+                    let reservation = null;
+                    let reservationDoc = null;
+                    
+                    // Check each result for non-empty data
+                    for (let i = 0; i < results.length; i++) {
+                        if (!results[i].empty && !results[i].docs.empty) {
+                            reservationDoc = results[i].docs[0];
+                            reservation = reservationDoc.data();
+                            reservation.id = reservationDoc.id;
+                            console.log(`Found reservation in query ${i}:`, reservation);
+                            break;
+                        }
+                    }
+                    
+                    if (reservation) {
+                        currentReservationId = reservation.id;
+                        currentReservationData = reservation;
+                        
+                        // Load car data including price and image for this reservation
+                        loadCarData(reservation.carId || reservation.carName, reservation);
+                        
+                    } else {
+                        // No approved reservations found
+                        console.log('No approved reservations found for user');
+                        showNoReservations();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading reservations:', error);
+                    showNoReservations();
+                });
+            }
+            
+            function populateReservationDetails(reservation) {
+                console.log('Populating reservation details:', reservation);
+                
+                // Update the DOM with reservation details
+                document.getElementById('car-model').textContent = reservation.carName || reservation.car || 'Toyota Innova';
+                document.getElementById('car-details').textContent = 
+                    `${reservation.seater || '7'} Seaters • ${reservation.transmission || 'Automatic'} • ${reservation.type || 'MPV'}`;
+                
+                // Format dates
+                let pickupDate, returnDate;
+                
+                if (reservation.startDate && reservation.startDate.toDate) {
+                    pickupDate = reservation.startDate.toDate();
+                } else if (reservation.startDate) {
+                    pickupDate = new Date(reservation.startDate);
+                } else {
+                    pickupDate = new Date();
+                    pickupDate.setDate(pickupDate.getDate() + 1); // Default to tomorrow
+                }
+                
+                if (reservation.endDate && reservation.endDate.toDate) {
+                    returnDate = reservation.endDate.toDate();
+                } else if (reservation.endDate) {
+                    returnDate = new Date(reservation.endDate);
+                } else {
+                    returnDate = new Date(pickupDate);
+                    returnDate.setDate(returnDate.getDate() + 3); // Default to 3 days
+                }
+                
+                document.getElementById('pickup-date').textContent = formatDate(pickupDate);
+                document.getElementById('return-date').textContent = formatDate(returnDate);
+                
+                // Calculate rental duration
+                const duration = Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24));
+                document.getElementById('rental-duration').textContent = `${duration} days`;
+                
+                document.getElementById('location').textContent = 'TJS, Matungao, Bulakan, Bulacan - 3017, Philippines';
+                
+                // Calculate accurate rental fee and total - USING ACTUAL CAR PRICE
+                const dailyRate = reservation.dailyRate || reservation.carPrice || carPrice;
+                const rentalFeeAmount = duration * dailyRate;
+                
+                // Update price information
+                rentalFeeLabel.textContent = `Rental Fee (${duration} days × ₱${dailyRate.toLocaleString()})`;
+                rentalFee.textContent = `₱${rentalFeeAmount.toLocaleString()}`;
+                totalAmountDisplay.textContent = `₱${rentalFeeAmount.toLocaleString()}`;
+                totalAmount.textContent = `₱${rentalFeeAmount.toLocaleString()}`;
+                modalTotalAmount.textContent = `₱${rentalFeeAmount.toLocaleString()}`;
+                
+                // Update other details
+                document.getElementById('pickup-location').textContent = 'TJS, Matungao, Bulakan, Bulacan - 3017, Philippines';
+                document.getElementById('return-location').textContent = 'TJS, Matungao, Bulakan, Bulacan - 3017, Philippines';
+                document.getElementById('contact-info').textContent = 
+                    `${reservation.userName || reservation.customerName || 'John Doe'}\n${reservation.contactNumber || '+63 912 345 6789'}\n${reservation.userEmail || 'john.doe@example.com'}`;
+                document.getElementById('reservation-id').textContent = reservation.reservationId || 'CR-2023-00125';
+                
+                // Show reservation content
+                showReservationContent();
+                
+                // Check if already paid
+                if (reservation.paymentStatus === 'paid') {
+                    updateUIAfterPayment();
+                }
+            }
+            
+            function formatDate(date) {
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            function showReservationContent() {
+                loadingSpinner.style.display = 'none';
+                reservationContent.style.display = 'block';
+                rentalInfo.style.display = 'block';
+                noReservations.style.display = 'none';
+            }
+            
+            function showNoReservations() {
+                loadingSpinner.style.display = 'none';
+                reservationContent.style.display = 'none';
+                rentalInfo.style.display = 'none';
+                noReservations.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

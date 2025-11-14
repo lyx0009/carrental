@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Account Settings | Car Rental</title>
+  <link rel="stylesheet" href="adminsettings.css" />
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { 
+        getAuth, 
+        onAuthStateChanged,
+        updatePassword,
+        reauthenticateWithCredential,
+        EmailAuthProvider
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        getDoc,
+        updateDoc
+    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+        authDomain: "carrental-4bdd4.firebaseapp.com",
+        projectId: "carrental-4bdd4",
+        storageBucket: "carrental-4bdd4.firebasestorage.app",
+        messagingSenderId: "318648301485",
+        appId: "1:318648301485:web:bc543198901a732b701324",
+        measurementId: "G-1C2E4MXEDK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let currentUserId = null;
+
+    // Check authentication state
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            currentUserId = user.uid;
+            await loadAdminData();
+        } else {
+            // Redirect to login if not authenticated
+            window.location.href = "admin.html";
+        }
+    });
+
+    async function loadAdminData() {
+        try {
+            const userDoc = await getDoc(doc(db, "users", currentUserId));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                
+                // Populate form fields with current data
+                document.getElementById('adminName').value = userData.fullName || 'Clark Miguel Delos Santos';
+                document.getElementById('adminEmail').value = userData.email || 'admin@carrental.com';
+                document.getElementById('adminPhone').value = userData.phoneNumber || '+63 987 654 3210';
+                
+                // Update profile info in sidebar
+                const profileName = document.querySelector('.profile-info h3');
+                if (profileName) {
+                    profileName.textContent = `Admin - ${userData.fullName || 'Clark Miguel'}`;
+                }
+            }
+        } catch (error) {
+            console.error("Error loading admin data:", error);
+            alert("Error loading admin data. Please try again.");
+        }
+    }
+
+    // Save updated profile information
+    async function saveProfileInfo() {
+        try {
+            const name = document.getElementById('adminName').value.trim();
+            const email = document.getElementById('adminEmail').value.trim();
+            const phone = document.getElementById('adminPhone').value.trim();
+
+            // Validate inputs
+            if (!name || !email) {
+                alert('Name and email are required fields.');
+                return;
+            }
+
+            // Update Firestore
+            await updateDoc(doc(db, "users", currentUserId), {
+                fullName: name,
+                email: email,
+                phoneNumber: phone,
+                updatedAt: new Date()
+            });
+
+            // Update profile info in sidebar
+            const profileName = document.querySelector('.profile-info h3');
+            if (profileName) {
+                profileName.textContent = `Admin - ${name}`;
+            }
+
+            alert('Profile information updated successfully!');
+            
+            // Disable editing after saving
+            document.getElementById('adminName').disabled = true;
+            document.getElementById('adminEmail').disabled = true;
+            document.getElementById('adminPhone').disabled = true;
+
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            alert("Error updating profile information. Please try again.");
+        }
+    }
+
+    // Change password
+    async function changePassword() {
+        try {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate inputs
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all password fields.');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('New password and confirm password do not match.');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters long.');
+                return;
+            }
+
+            // Reauthenticate user
+            const credential = EmailAuthProvider.credential(currentUser.email, oldPassword);
+            await reauthenticateWithCredential(currentUser, credential);
+
+            // Update password
+            await updatePassword(currentUser, newPassword);
+
+            // Clear password fields
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+
+            alert('Password updated successfully!');
+
+        } catch (error) {
+            console.error("Error changing password:", error);
+            
+            let errorMessage = "Error changing password. Please try again.";
+            if (error.code === 'auth/wrong-password') {
+                errorMessage = "Current password is incorrect.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "New password is too weak. Please choose a stronger password.";
+            } else if (error.code === 'auth/requires-recent-login') {
+                errorMessage = "For security reasons, please log in again before changing your password.";
+            }
+            
+            alert(errorMessage);
+        }
+    }
+
+    // Make functions globally available
+    window.saveProfileInfo = saveProfileInfo;
+    window.changePassword = changePassword;
+  </script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="profile-info">
+      <h3>Admin - Clark Miguel</h3>
+      <p>Administrator</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="admin-account-settings.html" class="active">Account Settings</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <h1>Admin Account Settings</h1>
+      <p>Manage your profile, credentials, and security settings.</p>
+    </header>
+
+    <!-- Admin Info -->
+    <section class="profile-section">
+      <h2>Personal Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Full Name</label>
+          <input type="text" id="adminName" value="Clark Miguel Delos Santos" disabled />
+          <button class="btn edit-btn" onclick="toggleEdit('adminName')">Edit</button>
+        </div>
+
+        <div class="info-item">
+          <label>Email</label>
+          <input type="email" id="adminEmail" value="admin@carrental.com" disabled />
+          <button class="btn edit-btn" onclick="toggleEdit('adminEmail')">Edit</button>
+        </div>
+
+        <div class="info-item">
+          <label>Phone Number</label>
+          <input type="tel" id="adminPhone" value="+63 987 654 3210" disabled />
+          <button class="btn edit-btn" onclick="toggleEdit('adminPhone')">Edit</button>
+        </div>
+      </div>
+      <button class="btn save-btn" onclick="saveProfileInfo()" style="margin-top: 20px;">Save Changes</button>
+    </section>
+
+    <!-- Password Change -->
+    <section class="profile-section">
+      <h2>Change Password</h2>
+      
+      <div class="password-group">
+        <label>Old Password</label>
+        <div class="password-input">
+          <input type="password" id="oldPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('oldPassword')">Show</button>
+        </div>
+      </div>
+
+      <div class="password-group">
+        <label>New Password</label>
+        <div class="password-input">
+          <input type="password" id="newPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('newPassword')">Show</button>
+        </div>
+      </div>
+
+      <div class="password-group">
+        <label>Confirm Password</label>
+        <div class="password-input">
+          <input type="password" id="confirmPassword" />
+          <button type="button" class="toggle-password" onclick="toggleVisibility('confirmPassword')">Show</button>
+        </div>
+      </div>
+
+      <button class="btn update-btn" onclick="changePassword()">Update Password</button>
+    </section>
+
+    <!-- Back Button -->
+    <button class="back-btn" onclick="window.location.href='adminpanel.html'">← Back to Admin Panel</button>
+  </div>
+
+  <script>
+    function toggleEdit(id) {
+      const input = document.getElementById(id);
+      input.disabled = !input.disabled;
+      if (!input.disabled) input.focus();
+    }
+
+    function toggleVisibility(id) {
+      const input = document.getElementById(id);
+      const btn = input.nextElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "Hide";
+      } else {
+        input.type = "password";
+        btn.textContent = "Show";
+      }
+    }
+  </script>
+</body>
+</html>

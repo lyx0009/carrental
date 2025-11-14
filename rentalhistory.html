@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarRental | Rental History</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Styles - Updated to White */
+        .sidebar {
+            width: 260px;
+            background: white;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+        
+        .logo {
+            padding: 25px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo h2 {
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2c3e50;
+        }
+        
+        .logo i {
+            font-size: 1.6rem;
+            color: #3498db;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .sidebar-nav ul {
+            list-style: none;
+        }
+        
+        .sidebar-nav li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            color: #555;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-nav a:hover, .sidebar-nav li.active a {
+            background: #f0f8ff;
+            color: #3498db;
+            border-left: 4px solid #3498db;
+        }
+        
+        .sidebar-nav a i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Updated Top Navigation to Match Rental History */
+        .top-nav {
+            background: white;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            height: 80px;
+        }
+        
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #555;
+            cursor: pointer;
+            display: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .top-nav h1 {
+            font-size: 1.6rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        
+        /* Content Area Styles */
+        .content-area {
+            flex: 1;
+            padding: 25px;
+            background: #f5f7fa;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .history-filter select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .history-filter select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        /* Rental History Container */
+        .rental-history-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .rental-history-item {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .rental-car-info {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .car-image-small {
+            width: 100px;
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 2rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .car-image-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .rental-details h4 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .rental-details p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .rental-cost {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+            padding-left: 20px;
+            border-left: 1px solid #eee;
+            min-width: 200px;
+        }
+        
+        .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .details-btn {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .details-btn:hover {
+            background: #e9ecef;
+            border-color: #ccc;
+        }
+
+        /* Invoice Button */
+        .invoice-btn {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        
+        .invoice-btn:hover {
+            background: #218838;
+        }
+        
+        /* Loading Spinner */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-history {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .no-history i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        /* Error Message */
+        .error-message {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            color: #e74c3c;
+        }
+        
+        .error-message i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .error-message button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.3s;
+        }
+        
+        .error-message button:hover {
+            background: #2980b9;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-approved {
+            background: #d1edff;
+            color: #004085;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                height: 100%;
+                z-index: 100;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .rental-history-item {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .rental-cost {
+                align-items: flex-start;
+                width: 100%;
+                border-left: none;
+                padding-left: 0;
+                border-top: 1px solid #eee;
+                padding-top: 20px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .content-area {
+                padding: 15px;
+            }
+            
+            .rental-car-info {
+                flex-direction: column;
+            }
+            
+            .car-image-small {
+                width: 100%;
+                height: 120px;
+            }
+            
+            .top-nav {
+                padding: 15px 20px;
+                height: 70px;
+            }
+            
+            .top-nav h1 {
+                font-size: 1.4rem;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .history-filter {
+                width: 100%;
+            }
+            
+            .history-filter select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar - Updated to White -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2><i class="fas fa-car"></i> CarRental</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="userdashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="browsecars.html"><i class="fas fa-car-side"></i> Browse Cars</a></li>
+                    <li class="active"><a href="rentalhistory.html"><i class="fas fa-history"></i> Rental History</a></li>
+                    <li><a href="reservation.html"><i class="fas fa-calendar-check"></i> Reservation</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation - Updated to Match Rental History -->
+            <header class="top-nav">
+                <div class="nav-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1>Rental History</h1>
+                </div>
+                <div class="nav-right"></div>
+            </header>
+
+            <!-- Rental History Content -->
+            <div class="content-area">
+                <div class="section-header">
+                    <h2>Your Rental History</h2>
+                    <div class="history-filter">
+                        <select id="history-period">
+                            <option value="all">All Time</option>
+                            <option value="month">Last Month</option>
+                            <option value="3months">Last 3 Months</option>
+                            <option value="year">Last Year</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="rental-history-container" id="rental-history-container">
+                    <!-- Loading Spinner -->
+                    <div class="loading-spinner" id="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                
+                <!-- No History Message -->
+                <div class="no-history" id="no-history" style="display: none;">
+                    <i class="fas fa-history"></i>
+                    <h3>No Rental History</h3>
+                    <p>You haven't completed any rentals yet.</p>
+                    <a href="browsecars.html" class="details-btn" style="display: inline-block; margin-top: 20px;">
+                        <i class="fas fa-car"></i> Browse Cars
+                    </a>
+                </div>
+                
+                <!-- Error Message -->
+                <div class="error-message" id="error-message" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error Loading Rental History</h3>
+                    <p>We couldn't load your rental history. This might be due to a permissions issue.</p>
+                    <button id="retry-button">Try Again</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgorYlaVB_fk3uCmWQVtM14D2cSlFaBeU",
+            authDomain: "carrental-4bdd4.firebaseapp.com",
+            projectId: "carrental-4bdd4",
+            storageBucket: "carrental-4bdd4.firebasestorage.app",
+            messagingSenderId: "318648301485",
+            appId: "1:318648301485:web:bc543198901a732b701324",
+            measurementId: "G-1C2E4MXEDK"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        // Global error handler to catch syntax errors
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+            console.error('At:', e.filename, 'line:', e.lineno);
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const historyContainer = document.getElementById('rental-history-container');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const noHistory = document.getElementById('no-history');
+            const errorMessage = document.getElementById('error-message');
+            const historyPeriod = document.getElementById('history-period');
+            const retryButton = document.getElementById('retry-button');
+            
+            // Toggle sidebar
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+            }
+            
+            // Retry loading rental history
+            if (retryButton) {
+                retryButton.addEventListener('click', function() {
+                    const user = auth.currentUser;
+                    if (user) {
+                        errorMessage.style.display = 'none';
+                        loadingSpinner.style.display = 'flex';
+                        loadRentalHistory(user.uid, historyPeriod.value);
+                    }
+                });
+            }
+
+            // Wait for Firebase auth to initialize
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    console.log('User authenticated:', user.uid, user.email);
+                    loadRentalHistory(user.uid);
+                } else {
+                    console.log('No user signed in, redirecting to login');
+                    window.location.href = 'login.html';
+                }
+            });
+            
+            // Filter functionality
+            if (historyPeriod) {
+                historyPeriod.addEventListener('change', function() {
+                    const user = auth.currentUser;
+                    if (user) {
+                        loadRentalHistory(user.uid, this.value);
+                    }
+                });
+            }
+            
+            async function loadRentalHistory(userId, period = 'all') {
+                console.log('Loading rental history for user:', userId, 'Period:', period);
+                
+                // Show loading spinner
+                loadingSpinner.style.display = 'flex';
+                noHistory.style.display = 'none';
+                errorMessage.style.display = 'none';
+                historyContainer.innerHTML = '';
+                
+                // Calculate date range based on period
+                let startDate = null;
+                const now = new Date();
+                
+                switch(period) {
+                    case 'month':
+                        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                        break;
+                    case '3months':
+                        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+                        break;
+                    case 'year':
+                        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                        break;
+                    default:
+                        startDate = null;
+                }
+                
+                try {
+                    // Query both collections and merge results
+                    console.log('Querying both reservations and rentalHistory collections...');
+                    
+                    // Build base queries for both collections
+                    let reservationsQuery = db.collection('reservations')
+                        .where('userId', '==', userId)
+                        .orderBy('createdAt', 'desc');
+                    
+                    let rentalHistoryQuery = db.collection('rentalHistory')
+                        .where('userId', '==', userId)
+                        .orderBy('createdAt', 'desc');
+                    
+                    // Apply date filter if specified
+                    if (startDate) {
+                        reservationsQuery = reservationsQuery.where('createdAt', '>=', startDate);
+                        rentalHistoryQuery = rentalHistoryQuery.where('createdAt', '>=', startDate);
+                    }
+                    
+                    // Execute both queries in parallel
+                    const [reservationsSnapshot, rentalHistorySnapshot] = await Promise.all([
+                        reservationsQuery.get(),
+                        rentalHistoryQuery.get()
+                    ]);
+                    
+                    console.log(`Found ${reservationsSnapshot.size} reservations and ${rentalHistorySnapshot.size} rental history items`);
+                    
+                    // Merge results from both collections
+                    const allRentals = [];
+                    
+                    reservationsSnapshot.forEach(doc => {
+                        const rental = doc.data();
+                        rental.id = doc.id;
+                        rental.source = 'reservations';
+                        console.log('Reservation item:', rental);
+                        validateRentalData(rental);
+                        allRentals.push(rental);
+                    });
+                    
+                    rentalHistorySnapshot.forEach(doc => {
+                        const rental = doc.data();
+                        rental.id = doc.id;
+                        rental.source = 'rentalHistory';
+                        console.log('Rental history item:', rental);
+                        validateRentalData(rental);
+                        allRentals.push(rental);
+                    });
+                    
+                    // Sort all rentals by date (newest first)
+                    allRentals.sort((a, b) => {
+                        const dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(0);
+                        const dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(0);
+                        return dateB - dateA;
+                    });
+                    
+                    console.log(`Total merged rentals: ${allRentals.length}`);
+                    
+                    loadingSpinner.style.display = 'none';
+                    
+                    if (allRentals.length === 0) {
+                        noHistory.style.display = 'block';
+                        return;
+                    }
+                    
+                    // Create rental history items
+                    const rentalPromises = allRentals.map(rental => 
+                        createRentalHistoryItem(rental)
+                    );
+                    
+                    const rentalItems = await Promise.all(rentalPromises);
+                    
+                    rentalItems.forEach(item => {
+                        if (item) {
+                            historyContainer.appendChild(item);
+                            
+                            const imgElements = item.querySelectorAll('img');
+                            imgElements.forEach(img => {
+                                ensureImageLoads(img);
+                            });
+                        }
+                    });
+                    
+                } catch (error) {
+                    console.error('Error loading rental history:', error);
+                    loadingSpinner.style.display = 'none';
+                    errorMessage.style.display = 'block';
+                    
+                    if (error.code === 'permission-denied') {
+                        errorMessage.querySelector('p').textContent = 
+                            'We couldn\'t load your rental history due to a permissions issue. Please contact support if this problem persists.';
+                    }
+                }
+            }
+            
+            // Data validation function
+            function validateRentalData(rental) {
+                console.log('📊 Validating rental data:', {
+                    id: rental.id,
+                    source: rental.source,
+                    hasAdminStatus: !!rental.adminStatus,
+                    hasStatus: !!rental.status,
+                    hasAdminStopped: rental.adminStopped !== undefined,
+                    adminStatus: rental.adminStatus,
+                    status: rental.status,
+                    adminStopped: rental.adminStopped
+                });
+                
+                // If this is from reservations and missing critical fields, log warning
+                if (rental.source === 'reservations' && !rental.adminStatus) {
+                    console.warn('⚠️ Reservation missing adminStatus:', rental.id);
+                }
+            }
+            
+            async function createRentalHistoryItem(rental) {
+                // Validate rental data
+                if (!isValidRental(rental)) {
+                    console.error('Invalid rental data:', rental);
+                    return null;
+                }
+                
+                const rentalItem = document.createElement('div');
+                rentalItem.className = 'rental-history-item';
+                rentalItem.setAttribute('data-id', rental.id);
+                rentalItem.setAttribute('data-source', rental.source);
+                
+                // Format dates - handle different field names in different collections
+                let pickupDate, returnDate;
+
+                if (rental.source === 'reservations') {
+                    // For reservations collection
+                    pickupDate = rental.startDate ? 
+                        (rental.startDate.toDate ? rental.startDate.toDate() : new Date(rental.startDate)) : 
+                        (rental.createdAt ? (rental.createdAt.toDate ? rental.createdAt.toDate() : new Date(rental.createdAt)) : new Date());
+                    
+                    returnDate = rental.endDate ? 
+                        (rental.endDate.toDate ? rental.endDate.toDate() : new Date(rental.endDate)) : 
+                        new Date(pickupDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+                } else {
+                    // For rentalHistory collection
+                    pickupDate = rental.pickupDate ? 
+                        (rental.pickupDate.toDate ? rental.pickupDate.toDate() : new Date(rental.pickupDate)) : 
+                        (rental.createdAt ? (rental.createdAt.toDate ? rental.createdAt.toDate() : new Date(rental.createdAt)) : new Date());
+                    
+                    returnDate = rental.returnDate ? 
+                        (rental.returnDate.toDate ? rental.returnDate.toDate() : new Date(rental.returnDate)) : 
+                        new Date(pickupDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+                }
+
+                // Validate dates
+                if (isNaN(pickupDate.getTime())) {
+                    console.warn('Invalid pickup date, using current date');
+                    pickupDate = new Date();
+                }
+                if (isNaN(returnDate.getTime())) {
+                    console.warn('Invalid return date, calculating from pickup date');
+                    returnDate = new Date(pickupDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+                }
+
+                const pickupDateStr = formatDate(pickupDate);
+                const returnDateStr = formatDate(returnDate);
+                const duration = Math.max(1, Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24)));
+                
+                // Get car name and amount - handle different field names
+                const carName = rental.carName || rental.carModel || 'Car Rental';
+                const totalAmount = rental.totalAmount || rental.totalPrice || 0;
+                
+                // Get car image
+                let carImageHTML = '<i class="fas fa-car"></i>';
+                let carImageSrc = null;
+                
+                if (rental.carImage) {
+                    carImageSrc = rental.carImage;
+                } else if (rental.imageBase64) {
+                    carImageSrc = rental.imageBase64;
+                } else if (rental.mainImage) {
+                    carImageSrc = rental.mainImage;
+                } else if (rental.imageUrl) {
+                    carImageSrc = rental.imageUrl;
+                }
+                
+                if (carImageSrc) {
+                    carImageHTML = `<img src="${carImageSrc}" alt="${carName}" />`;
+                } else if (rental.carId) {
+                    try {
+                        const carImage = await fetchCarImage(rental.carId);
+                        if (carImage) {
+                            carImageHTML = `<img src="${carImage}" alt="${carName}" />`;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching car image:', error);
+                    }
+                } else if (carName && carName !== 'Car Rental') {
+                    try {
+                        const carImage = await findCarImageByName(carName);
+                        if (carImage) {
+                            carImageHTML = `<img src="${carImage}" alt="${carName}" />`;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching car image by name:', error);
+                    }
+                }
+                
+                rentalItem.innerHTML = `
+                    <div class="rental-car-info">
+                        <div class="car-image-small">
+                            ${carImageHTML}
+                        </div>
+                        <div class="rental-details">
+                            <h4>${carName}</h4>
+                            <p>Rental Period: ${pickupDateStr} - ${returnDateStr} (${duration} days)</p>
+                            <p>Total: ₱${totalAmount.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="rental-cost">
+                        <span class="amount">₱${totalAmount.toLocaleString()}</span>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="details-btn" data-id="${rental.id}" data-source="${rental.source}">
+                                <i class="fas fa-info-circle"></i> View Details
+                            </button>
+                            <a href="#" class="invoice-btn download-invoice" data-id="${rental.id}">
+                                <i class="fas fa-download"></i> Invoice
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                const detailsBtn = rentalItem.querySelector('.details-btn');
+                detailsBtn.addEventListener('click', function() {
+                    showRentalDetails(rental);
+                });
+
+                const invoiceBtn = rentalItem.querySelector('.download-invoice');
+                if (invoiceBtn) {
+                    invoiceBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        downloadInvoice(rental);
+                    });
+                }
+                
+                return rentalItem;
+            }
+
+            function isValidRental(rental) {
+                return rental && 
+                       typeof rental === 'object' && 
+                       rental.id && 
+                       rental.source;
+            }
+            
+            async function fetchCarImage(carId) {
+                try {
+                    console.log('Fetching car image for carId:', carId);
+                    const carDoc = await db.collection('cars').doc(carId).get();
+                    
+                    if (carDoc.exists) {
+                        const carData = carDoc.data();
+                        console.log('Car data found:', carData);
+                        
+                        const carImage = carData.imageBase64 || carData.mainImage || carData.imageUrl || carData.image;
+                        
+                        if (carImage) {
+                            console.log('Car image found in cars collection');
+                            return carImage;
+                        } else {
+                            console.log('No car image found in cars collection for carId:', carId);
+                        }
+                    } else {
+                        console.log('Car document not found for carId:', carId);
+                    }
+                } catch (error) {
+                    console.error('Error fetching car image:', error);
+                }
+                return null;
+            }
+            
+            async function findCarImageByName(carName) {
+                if (!carName) return null;
+                
+                try {
+                    console.log('Searching for car by name:', carName);
+                    const carsSnapshot = await db.collection('cars')
+                        .where('name', '==', carName)
+                        .limit(1)
+                        .get();
+                    
+                    if (!carsSnapshot.empty) {
+                        const carData = carsSnapshot.docs[0].data();
+                        console.log('Car found by name:', carData);
+                        
+                        const carImage = carData.imageBase64 || carData.mainImage || carData.imageUrl || carData.image;
+                        
+                        if (carImage) {
+                            console.log('Car image found by name');
+                            return carImage;
+                        }
+                    } else {
+                        console.log('No car found with name:', carName);
+                    }
+                } catch (error) {
+                    console.error('Error finding car by name:', error);
+                }
+                return null;
+            }
+            
+            function ensureImageLoads(imgElement) {
+                imgElement.onerror = function() {
+                    console.log('Image failed to load, using fallback icon');
+                    this.style.display = 'none';
+                    const parent = this.parentElement;
+                    if (parent && !parent.querySelector('.fa-car')) {
+                        parent.innerHTML = '<i class="fas fa-car"></i>';
+                    }
+                };
+                
+                imgElement.onload = function() {
+                    console.log('Image loaded successfully');
+                };
+            }
+            
+            function showRentalDetails(rental) {
+                // Format dates - handle different field names in different collections
+                let pickupDate, returnDate;
+                
+                if (rental.source === 'reservations') {
+                    // For reservations collection
+                    pickupDate = rental.startDate ? 
+                        (rental.startDate.toDate ? rental.startDate.toDate() : new Date(rental.startDate)) : 
+                        (rental.createdAt ? (rental.createdAt.toDate ? rental.createdAt.toDate() : new Date(rental.createdAt)) : new Date());
+                    
+                    returnDate = rental.endDate ? 
+                        (rental.endDate.toDate ? rental.endDate.toDate() : new Date(rental.endDate)) : 
+                        new Date(pickupDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+                } else {
+                    // For rentalHistory collection
+                    pickupDate = rental.pickupDate ? 
+                        (rental.pickupDate.toDate ? rental.pickupDate.toDate() : new Date(rental.pickupDate)) : 
+                        (rental.createdAt ? (rental.createdAt.toDate ? rental.createdAt.toDate() : new Date(rental.createdAt)) : new Date());
+                    
+                    returnDate = rental.returnDate ? 
+                        (rental.returnDate.toDate ? rental.returnDate.toDate() : new Date(rental.returnDate)) : 
+                        new Date(pickupDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+                }
+                
+                const pickupDateStr = formatDate(pickupDate);
+                const returnDateStr = formatDate(returnDate);
+                const duration = Math.max(1, Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24)));
+                
+                // Get car name and amount - handle different field names
+                const carName = rental.carName || rental.carModel || 'N/A';
+                const totalAmount = rental.totalAmount || rental.totalPrice || 0;
+                
+                let paymentMethodText = 'GCash';
+                if (rental.paymentMethod === 'onhand') {
+                    paymentMethodText = 'Pay on Hand';
+                }
+                
+                // Create modal or alert with rental details
+                const detailsMessage = `
+                    Car: ${carName}
+                    Rental Period: ${pickupDateStr} - ${returnDateStr} (${duration} days)
+                    Total Amount: ₱${totalAmount.toLocaleString()}
+                    Payment Method: ${paymentMethodText}
+                `;
+                
+                alert(detailsMessage);
+            }
+
+            function downloadInvoice(rental) {
+                // Format dates for invoice
+                let startDate, endDate;
+                
+                if (rental.source === 'reservations') {
+                    startDate = rental.startDate;
+                    endDate = rental.endDate;
+                } else {
+                    startDate = rental.pickupDate;
+                    endDate = rental.returnDate;
+                }
+                
+                // Calculate total days
+                let totalDays = rental.totalDays || 'N/A';
+                if (totalDays === 'N/A' && startDate && endDate) {
+                    const start = startDate.toDate ? startDate.toDate() : new Date(startDate);
+                    const end = endDate.toDate ? endDate.toDate() : new Date(endDate);
+                    const timeDiff = end.getTime() - start.getTime();
+                    totalDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                }
+                
+                // Create invoice content with enhanced design
+                const invoiceContent = `
+                    <html>
+                    <head>
+                        <title>Invoice - ${rental.carName || 'Car Rental'}</title>
+                        <style>
+                            body { 
+                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                                margin: 0; 
+                                padding: 15px; 
+                                background: #f5f7fa;
+                                color: #333;
+                                font-size: 12px;
+                            }
+                            .invoice-container {
+                                max-width: 600px;
+                                margin: 0 auto;
+                                background: white;
+                                border-radius: 8px;
+                                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                                overflow: hidden;
+                            }
+                            .header {
+                                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+                                color: white;
+                                padding: 20px;
+                                text-align: center;
+                            }
+                            .header h1 {
+                                margin: 0 0 8px;
+                                font-size: 20px;
+                                font-weight: 600;
+                            }
+                            .header p {
+                                margin: 0;
+                                opacity: 0.9;
+                                font-size: 12px;
+                            }
+                            .company-info {
+                                background: #2c3e50;
+                                color: white;
+                                padding: 10px 20px;
+                                text-align: center;
+                                font-size: 11px;
+                            }
+                            .details {
+                                padding: 20px;
+                            }
+                            .details table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-bottom: 15px;
+                            }
+                            .details th {
+                                background: #f8f9fa;
+                                padding: 8px 10px;
+                                text-align: left;
+                                font-weight: 600;
+                                color: #2c3e50;
+                                border-bottom: 2px solid #3498db;
+                                font-size: 11px;
+                            }
+                            .details td {
+                                padding: 8px 10px;
+                                border-bottom: 1px solid #e9ecef;
+                                font-size: 11px;
+                            }
+                            .details tr:last-child td {
+                                border-bottom: none;
+                            }
+                            .total {
+                                background: #f8f9fa;
+                                padding: 15px;
+                                border-radius: 6px;
+                                text-align: center;
+                                margin: 15px 0;
+                                border-left: 4px solid #3498db;
+                            }
+                            .total-amount {
+                                font-size: 22px;
+                                font-weight: bold;
+                                color: #2c3e50;
+                                margin: 8px 0;
+                            }
+                            .footer {
+                                background: #34495e;
+                                color: white;
+                                padding: 15px 20px;
+                                text-align: center;
+                                font-size: 11px;
+                            }
+                            .footer p {
+                                margin: 3px 0;
+                            }
+                            .thank-you {
+                                background: #3498db;
+                                color: white;
+                                padding: 10px;
+                                text-align: center;
+                                font-weight: 600;
+                                font-size: 13px;
+                            }
+                            .invoice-number {
+                                background: #e74c3c;
+                                color: white;
+                                padding: 5px 10px;
+                                border-radius: 15px;
+                                display: inline-block;
+                                margin-top: 8px;
+                                font-size: 10px;
+                                font-weight: 600;
+                            }
+                            .citation {
+                                text-align: center;
+                                padding: 8px;
+                                font-size: 10px;
+                                color: #666;
+                                background: #f8f9fa;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="invoice-container">
+                            <div class="header">
+                                <h1><i class="fas fa-car"></i> CarRental Invoice</h1>
+                                <p>Invoice Date: ${new Date().toLocaleDateString()}</p>
+                                <div class="invoice-number">
+                                    Invoice #${rental.id.substring(0, 8).toUpperCase()}
+                                </div>
+                            </div>
+                            
+                            <div class="company-info">
+                                <p>CarRental System • arvinx15@gmail.com • 09361657598</p>
+                            </div>
+                            
+                            <div class="details">
+                                <table>
+                                    <tr>
+                                        <th colspan="2" style="text-align: center; background: #3498db; color: white;">
+                                            <i class="fas fa-car"></i> Rental Details
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: 600; width: 30%;">Car:</td>
+                                        <td>${rental.carName || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: 600;">Rental Period:</td>
+                                        <td>${formatDate(startDate)} to ${formatDate(endDate)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: 600;">Total Days:</td>
+                                        <td>${totalDays} day${totalDays !== 1 ? 's' : ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: 600;">Daily Rate:</td>
+                                        <td>₱${Math.round((rental.totalPrice || rental.totalAmount || 0) / (totalDays || 1))}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: 600;">Payment Method:</td>
+                                        <td>${rental.paymentMethod === 'onhand' ? 'Pay on Hand' : 'GCash'}</td>
+                                    </tr>
+                                </table>
+                                
+                                <div class="total">
+                                    <p style="margin: 0; font-size: 11px; color: #666;">TOTAL AMOUNT</p>
+                                    <div class="total-amount">₱${(rental.totalPrice || rental.totalAmount || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="thank-you">
+                                <i class="fas fa-check-circle"></i> Thank you for choosing CarRental!
+                            </div>
+                            
+                            <div class="footer">
+                                <p>CarRental System - Your trusted car rental partner</p>
+                                <p>For inquiries, contact: arvinx15@gmail.com | 09361657598</p>
+                            </div>
+                            
+                            <div class="citation">
+                                Car Rental | 2025
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                // Create a blob and download
+                const blob = new Blob([invoiceContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `invoice-${rental.carName || 'rental'}-${new Date().getTime()}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            function formatDate(date) {
+                if (!date) return 'N/A';
+                
+                let dateObj;
+                
+                // Handle Firebase Timestamp objects
+                if (date && typeof date.toDate === 'function') {
+                    dateObj = date.toDate();
+                } 
+                // Handle string dates
+                else if (typeof date === 'string') {
+                    dateObj = new Date(date);
+                }
+                // Handle Date objects
+                else if (date instanceof Date) {
+                    dateObj = date;
+                }
+                // Fallback
+                else {
+                    console.warn('Invalid date format:', date);
+                    return 'N/A';
+                }
+                
+                // Check if the date is valid
+                if (isNaN(dateObj.getTime())) {
+                    console.warn('Invalid date object:', date);
+                    return 'N/A';
+                }
+                
+                const year = dateObj.getFullYear();
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}`;
+            }
+        });
+    </script>
+</body>
+</html>
