@@ -38,7 +38,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
-                <h2><i class="fas fa-car"></i> Lakbay Rent</h2>
+                <h2><i class="fas fa-car"></i> CarRental</h2>
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -391,7 +391,7 @@
                     });
             }
             
-            // Calculate user statistics from reservations
+            // Calculate user statistics from reservations - FIXED VERSION
             function calculateUserStats(querySnapshot) {
                 let totalRentals = 0;
                 let activeRentals = 0;
@@ -400,21 +400,76 @@
                 if (!querySnapshot.empty) {
                     querySnapshot.forEach((doc) => {
                         const reservation = doc.data();
+                        const reservationId = doc.id;
                         totalRentals++;
                         
-                        // Check if reservation is active (approved and within date range)
-                        if (reservation.adminStatus === 'approved') {
+                        console.log('Processing reservation:', reservationId, {
+                            adminStatus: reservation.adminStatus,
+                            status: reservation.status,
+                            adminStopped: reservation.adminStopped,
+                            startDate: reservation.startDate,
+                            endDate: reservation.endDate
+                        });
+                        
+                        // Check if reservation is ACTIVE (approved OR active status, NOT completed/cancelled/stopped)
+                        const isActiveStatus = (reservation.adminStatus === 'approved' || reservation.adminStatus === 'active');
+                        const isNotCompleted = reservation.adminStatus !== 'completed' && 
+                                              reservation.adminStatus !== 'cancelled';
+                        const isNotStoppedByAdmin = !reservation.adminStopped;
+                        
+                        if (isActiveStatus && isNotCompleted && isNotStoppedByAdmin) {
+                            // Check if current date is within the rental period
                             const now = new Date();
-                            const startDate = reservation.startDate.toDate ? reservation.startDate.toDate() : new Date(reservation.startDate);
-                            const endDate = reservation.endDate.toDate ? reservation.endDate.toDate() : new Date(reservation.endDate);
+                            let startDate, endDate;
                             
-                            if (now >= startDate && now <= endDate) {
-                                activeRentals++;
+                            try {
+                                // Convert Firestore timestamps to Date objects
+                                if (reservation.startDate && reservation.startDate.toDate) {
+                                    startDate = reservation.startDate.toDate();
+                                } else if (reservation.startDate) {
+                                    startDate = new Date(reservation.startDate);
+                                }
+                                
+                                if (reservation.endDate && reservation.endDate.toDate) {
+                                    endDate = reservation.endDate.toDate();
+                                } else if (reservation.endDate) {
+                                    endDate = new Date(reservation.endDate);
+                                }
+                                
+                                if (startDate && endDate) {
+                                    // Check if today is within the rental period (inclusive)
+                                    const today = new Date(now);
+                                    today.setHours(0, 0, 0, 0);
+                                    
+                                    const rentalStart = new Date(startDate);
+                                    rentalStart.setHours(0, 0, 0, 0);
+                                    
+                                    const rentalEnd = new Date(endDate);
+                                    rentalEnd.setHours(23, 59, 59, 999);
+                                    
+                                    const isWithinRentalPeriod = today >= rentalStart && today <= rentalEnd;
+                                    
+                                    if (isWithinRentalPeriod) {
+                                        activeRentals++;
+                                        console.log('✅ ACTIVE RENTAL FOUND:', reservationId, 'Status:', reservation.adminStatus);
+                                    } else {
+                                        console.log('❌ Rental not active - outside date range:', reservationId);
+                                    }
+                                } else {
+                                    console.log('❌ Missing dates for reservation:', reservationId);
+                                }
+                            } catch (dateError) {
+                                console.error('Error processing dates for reservation:', reservationId, dateError);
                             }
+                        } else {
+                            console.log('❌ Rental not active - status issue:', reservationId, {
+                                adminStatus: reservation.adminStatus,
+                                adminStopped: reservation.adminStopped
+                            });
                         }
                         
                         // Add to total spent if reservation is paid or completed
-                        if (reservation.paymentStatus === 'paid' || reservation.adminStatus === 'approved') {
+                        if (reservation.paymentStatus === 'paid' || reservation.adminStatus === 'approved' || reservation.adminStatus === 'active' || reservation.adminStatus === 'completed') {
                             totalSpent += reservation.totalPrice || 0;
                         }
                     });
@@ -424,6 +479,8 @@
                 totalRentalsElement.textContent = totalRentals;
                 activeRentalsElement.textContent = activeRentals;
                 totalSpentElement.textContent = `₱${totalSpent.toLocaleString()}`;
+                
+                console.log('Final stats - Total:', totalRentals, 'Active:', activeRentals, 'Spent:', totalSpent);
             }
             
             // Set up real-time listener for cars - UPDATED TO FILTER MAINTENANCE CARS

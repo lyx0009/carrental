@@ -431,7 +431,7 @@
             }
             
             .top-nav h1 {
-                font-size: 1.4rem;
+                fontSize: 1.4rem;
             }
             
             .section-header {
@@ -845,20 +845,12 @@
                     <div class="rental-cost">
                         <span class="amount">₱${totalAmount.toLocaleString()}</span>
                         <div style="display: flex; gap: 10px;">
-                            <button class="details-btn" data-id="${rental.id}" data-source="${rental.source}">
-                                <i class="fas fa-info-circle"></i> View Details
-                            </button>
                             <a href="#" class="invoice-btn download-invoice" data-id="${rental.id}">
                                 <i class="fas fa-download"></i> Invoice
                             </a>
                         </div>
                     </div>
                 `;
-                
-                const detailsBtn = rentalItem.querySelector('.details-btn');
-                detailsBtn.addEventListener('click', function() {
-                    showRentalDetails(rental);
-                });
 
                 const invoiceBtn = rentalItem.querySelector('.download-invoice');
                 if (invoiceBtn) {

@@ -304,7 +304,7 @@
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal) {
-                        modal.classList.remove('show');
+                        modal.classList.remove("show");
                     }
                 });
             });
@@ -326,34 +326,43 @@
                 const totalUsersElement = document.getElementById('total-users');
                 if (totalUsersElement) totalUsersElement.textContent = usersSnapshot.size;
 
-                // Load ONLY APPROVED and NOT COMPLETED reservations for active rentals
-                console.log('Loading ACTIVE approved reservations from Firestore...');
-                const approvedReservationsSnapshot = await getDocs(
-                    query(collection(this.db, 'reservations'), 
-                    where('adminStatus', '==', 'approved'))
+                // FIXED: Load ALL ACTIVE rentals (approved AND active status)
+                console.log('Loading ACTIVE rentals from Firestore...');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // Get all reservations that are approved or active (not completed/cancelled)
+                const reservationsSnapshot = await getDocs(
+                    query(collection(this.db, 'reservations'))
                 );
-                console.log('Total approved reservations found:', approvedReservationsSnapshot.size);
                 
                 let activeRentalsCount = 0;
                 let activeRentalsData = [];
-                const today = new Date();
+                const rentalUpdates = []; // Track rentals that need status updates
                 
-                console.log('Today:', today.toLocaleDateString());
+                console.log('Total reservations found:', reservationsSnapshot.size);
                 
-                approvedReservationsSnapshot.forEach(docSnapshot => {
+                for (const docSnapshot of reservationsSnapshot.docs) {
                     const rental = docSnapshot.data();
-                    console.log('Checking approved rental:', docSnapshot.id, 'Status:', rental.adminStatus, rental.status);
+                    const rentalId = docSnapshot.id;
                     
-                    // Skip completed rentals
-                    if (rental.adminStatus === 'completed' || rental.status === 'completed') {
-                        console.log('Skipping - completed');
-                        return;
+                    // Skip completed or cancelled rentals
+                    if (rental.adminStatus === 'completed' || rental.adminStatus === 'cancelled' || 
+                        rental.status === 'completed' || rental.status === 'cancelled') {
+                        console.log('Skipping - completed/cancelled:', rentalId);
+                        continue;
+                    }
+                    
+                    // Process both approved AND active rentals
+                    if (rental.adminStatus !== 'approved' && rental.adminStatus !== 'active') {
+                        console.log('Skipping - not approved or active:', rentalId);
+                        continue;
                     }
                     
                     // Check if we have valid dates
                     if (!rental.startDate || !rental.endDate) {
-                        console.log('Skipping - missing dates');
-                        return;
+                        console.log('Skipping - missing dates:', rentalId);
+                        continue;
                     }
                     
                     try {
@@ -363,18 +372,18 @@
                         if (rental.startDate.toDate) {
                             startDate = rental.startDate.toDate();
                         } else {
-                            console.log('Invalid startDate format');
-                            return;
+                            console.log('Invalid startDate format:', rentalId);
+                            continue;
                         }
                         
                         if (rental.endDate.toDate) {
                             endDate = rental.endDate.toDate();
                         } else {
-                            console.log('Invalid endDate format');
-                            return;
+                            console.log('Invalid endDate format:', rentalId);
+                            continue;
                         }
                         
-                        console.log('Rental dates - Start:', startDate.toLocaleDateString(), 'End:', endDate.toLocaleDateString());
+                        console.log('Rental dates - ID:', rentalId, 'Start:', startDate.toLocaleDateString(), 'End:', endDate.toLocaleDateString());
                         
                         // Check if today falls between start and end dates (inclusive)
                         const todayStart = new Date(today);
@@ -389,30 +398,71 @@
                         const rentalEnd = new Date(endDate);
                         rentalEnd.setHours(23, 59, 59, 999);
                         
-                        console.log('Date comparison:');
-                        console.log('Today range:', todayStart, 'to', todayEnd);
-                        console.log('Rental range:', rentalStart, 'to', rentalEnd);
-                        console.log('Is today within rental range?', todayStart <= rentalEnd && todayEnd >= rentalStart);
+                        console.log('Date comparison for', rentalId, ':');
+                        console.log('Today range:', todayStart.toLocaleDateString(), 'to', todayEnd.toLocaleDateString());
+                        console.log('Rental range:', rentalStart.toLocaleDateString(), 'to', rentalEnd.toLocaleDateString());
                         
                         // Check if today overlaps with the rental period
-                        if (todayStart <= rentalEnd && todayEnd >= rentalStart) {
-                            console.log('✅ ACTIVE RENTAL FOUND:', docSnapshot.id);
+                        const isActiveRental = todayStart <= rentalEnd && todayEnd >= rentalStart;
+                        console.log('Is today within rental range?', isActiveRental);
+                        
+                        if (isActiveRental) {
+                            console.log('✅ ACTIVE RENTAL FOUND:', rentalId, 'Current status:', rental.adminStatus);
                             activeRentalsCount++;
+                            
+                            // Check if approved rental should be marked as active
+                            if (rental.adminStatus === 'approved' && todayStart >= rentalStart) {
+                                console.log('🔄 APPROVED → ACTIVE transition needed for:', rentalId);
+                                rentalUpdates.push({
+                                    rentalId: rentalId,
+                                    carId: rental.carId,
+                                    currentStatus: rental.adminStatus,
+                                    newStatus: 'active'
+                                });
+                            }
+                            
                             activeRentalsData.push({
-                                id: docSnapshot.id,
+                                id: rentalId,
                                 ...rental
                             });
                         } else {
-                            console.log('❌ Not active - outside date range');
+                            console.log('❌ Not active - outside date range:', rentalId);
                         }
                         
                     } catch (dateError) {
-                        console.error('Error processing dates:', dateError);
+                        console.error('Error processing dates for rental', rentalId, ':', dateError);
                     }
-                });
+                }
                 
                 console.log('Final active rentals count:', activeRentalsCount);
                 console.log('Active rentals data:', activeRentalsData);
+                console.log('Rental updates needed:', rentalUpdates);
+                
+                // Process status updates for rentals that need to transition from approved → active
+                if (rentalUpdates.length > 0) {
+                    console.log('Processing rental status updates...');
+                    for (const update of rentalUpdates) {
+                        try {
+                            // Update rental status to active
+                            await updateDoc(doc(this.db, 'reservations', update.rentalId), {
+                                adminStatus: 'active',
+                                status: 'active',
+                                activatedAt: serverTimestamp()
+                            });
+                            console.log('✅ Updated rental status to active:', update.rentalId);
+                            
+                            // Ensure the car is marked as rented
+                            await updateDoc(doc(this.db, 'cars', update.carId), {
+                                status: 'Rented',
+                                available: false
+                            });
+                            console.log('✅ Updated car status to Rented:', update.carId);
+                            
+                        } catch (updateError) {
+                            console.error('Error updating rental/car status:', update.rentalId, updateError);
+                        }
+                    }
+                }
                 
                 const activeRentalsElement = document.getElementById('active-rentals');
                 if (activeRentalsElement) activeRentalsElement.textContent = activeRentalsCount;
@@ -518,7 +568,11 @@
                 console.error('Error formatting dates for rental:', id, dateError);
             }
             
-            // Only show "Stop Rental" button - no approve actions for active rentals
+            // Determine status badge based on actual status
+            const status = rental.adminStatus || rental.status;
+            const statusText = status === 'active' ? 'Active' : 'Approved';
+            const statusClass = status === 'active' ? 'status-active' : 'status-approved';
+            
             row.innerHTML = `
                 <td>${id.substring(0, 8)}</td>
                 <td>${rental.customerName || rental.username || 'N/A'}</td>
@@ -527,7 +581,7 @@
                 <td>${endDate}</td>
                 <td>₱${rental.totalPrice ? rental.totalPrice.toLocaleString() : 'N/A'}</td>
                 <td>
-                    <span class="status-badge status-active">Active</span>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
                 </td>
                 <td>
                     <button class="btn btn-info stop-rental" data-id="${id}" data-car-id="${rental.carId}">Stop Rental</button>
@@ -553,7 +607,9 @@
             }
 
             try {
-                // Update rental status to completed - but keep it in the system
+                console.log('🛑 Stopping rental:', rentalId, 'for car:', carId);
+                
+                // Update rental status to completed
                 await updateDoc(doc(this.db, 'reservations', rentalId), {
                     adminStatus: 'completed',
                     status: 'completed',
@@ -568,12 +624,13 @@
                     available: true
                 });
 
+                console.log('✅ Rental stopped and car made available');
                 alert('Rental stopped successfully! Car is now available for new rentals.');
                 
-                // Refresh the dashboard and cars
+                // Refresh all sections to reflect changes
                 await this.loadDashboard();
                 await this.loadCars();
-                await this.loadRentals(); // Refresh rental history to show the completed rental
+                await this.loadRentals();
                 
             } catch (error) {
                 console.error('Error stopping rental:', error);
@@ -1213,11 +1270,14 @@
                     status: 'Rented',
                     available: false
                 });
+
+                console.log('✅ Reservation approved and car marked as rented:', id);
+                alert('Reservation approved successfully! Car marked as rented.');
                 
+                // Refresh all sections to show updated data
                 await this.loadReservations();
                 await this.loadDashboard();
                 await this.loadCars();
-                alert('Reservation approved successfully! Car marked as rented.');
                 
             } catch (error) {
                 console.error('Error approving reservation:', error);
@@ -1536,7 +1596,7 @@
                 }
             }
             
-            // FIXED: Removed status column as requested
+            // FIXED: Removed Status column as requested
             row.innerHTML = `
                 <td><input class="rental-select" type="checkbox" data-id="${id}"></td>
                 <td>${id.substring(0, 8)}</td>
@@ -1636,6 +1696,7 @@
     });
   </script>
 
+  <!-- Your existing CSS remains the same -->
   <style>
     /* --- Your existing CSS --- */
     :root{
